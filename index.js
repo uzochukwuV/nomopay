@@ -33,6 +33,58 @@ const server = http.createServer((req, res) => {
     return send(res, 200, JSON.stringify({ status: 'ok', app: 'splitlink-frontend' }), 'application/json; charset=utf-8');
   }
 
+  if (url.pathname === '/frontend-config.json') {
+    return send(
+      res,
+      200,
+      JSON.stringify({
+        clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.VITE_CLERK_PUBLISHABLE_KEY || '',
+        apiBaseUrl: process.env.API_BASE_URL || '',
+        stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+      }),
+      'application/json; charset=utf-8'
+    );
+  }
+
+  if (url.pathname.startsWith('/api/')) {
+    const apiBaseUrl = process.env.API_BASE_URL;
+    if (!apiBaseUrl) {
+      return send(
+        res,
+        503,
+        JSON.stringify({ error: 'API_BASE_URL is not configured for frontend API proxying' }),
+        'application/json; charset=utf-8'
+      );
+    }
+
+    const targetUrl = new URL(url.pathname + url.search, apiBaseUrl);
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', async () => {
+      try {
+        const response = await fetch(targetUrl, {
+          method: req.method,
+          headers: {
+            ...req.headers,
+            host: targetUrl.host,
+          },
+          body: ['GET', 'HEAD'].includes(req.method) ? undefined : Buffer.concat(chunks),
+        });
+        const body = Buffer.from(await response.arrayBuffer());
+        res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+        res.end(body);
+      } catch (error) {
+        send(
+          res,
+          502,
+          JSON.stringify({ error: 'Unable to reach configured API backend' }),
+          'application/json; charset=utf-8'
+        );
+      }
+    });
+    return;
+  }
+
   const requestedPath = url.pathname === '/' ? '/index.html' : url.pathname;
   const safePath = path.normalize(requestedPath).replace(/^\.\.(\/|\\|$)/, '');
   let filePath = path.join(FRONTEND_DIR, safePath);

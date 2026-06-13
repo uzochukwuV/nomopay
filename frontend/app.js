@@ -1,5 +1,12 @@
 const platformFee = 0.02;
 
+const appState = {
+  config: { clerkPublishableKey: '', apiBaseUrl: '', stripePublishableKey: '' },
+  clerk: null,
+  currentUser: null,
+  authReady: false,
+};
+
 const products = [
   { title: 'Ceramic Ritual Set', merchant: 'Maison Kiln', price: 84, commission: 0.22, color: 'clay', links: 148 },
   { title: 'Founder Sprint Kit', merchant: 'Northstar Lab', price: 149, commission: 0.18, color: 'graphite', links: 96 },
@@ -22,7 +29,11 @@ const icon = (name) => {
 };
 
 function money(value) {
-  return `$${value.toFixed(2)}`;
+  return `$${Number(value || 0).toFixed(2)}`;
+}
+
+function cents(value) {
+  return money((Number(value || 0)) / 100);
 }
 
 function slugify(value) {
@@ -36,6 +47,332 @@ function getRole() {
 
 function shell(content) {
   document.getElementById('app').innerHTML = content;
+}
+
+function backendBase() {
+  return appState.config.apiBaseUrl || '';
+}
+
+async function loadConfig() {
+  try {
+    const response = await fetch('/frontend-config.json');
+    appState.config = await response.json();
+  } catch {
+    appState.config = { clerkPublishableKey: '', apiBaseUrl: '', stripePublishableKey: '' };
+  }
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) return resolve();
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+async function initAuth() {
+  if (!appState.config.clerkPublishableKey) {
+    appState.authReady = false;
+    return;
+  }
+  try {
+    await loadScript('https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js');
+    const ClerkConstructor = window.Clerk;
+    if (!ClerkConstructor) throw new Error('Clerk unavailable');
+    appState.clerk = new ClerkConstructor(appState.config.clerkPublishableKey);
+    await appState.clerk.load();
+    appState.currentUser = appState.clerk.user || null;
+    appState.authReady = true;
+  } catch (error) {
+    console.warn('Clerk could not initialize:', error);
+    appState.authReady = false;
+  }
+}
+
+async function getAuthToken() {
+  if (!appState.clerk?.session) return null;
+  try {
+    return await appState.clerk.session.getToken();
+  } catch {
+    return null;
+  }
+}
+
+async function api(path, options = {}) {
+  const token = await getAuthToken();
+  const response = await fetch(`${backendBase()}${path}`, {
+    ...options,
+    headers: {
+      Accept: 'application/json',
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
+  });
+  const text = await response.text();
+  let payload = null;
+  try { payload = text ? JSON.parse(text) : null; } catch { payload = { raw: text }; }
+  if (!response.ok) {
+    const message = payload?.error?.message || payload?.error || `Request failed (${response.status})`;
+    const err = new Error(typeof message === 'string' ? message : `Request failed (${response.status})`);
+    err.status = response.status;
+    err.payload = payload;
+    throw err;
+  }
+  return payload;
+}
+
+function setupClerkMount(targetId, mode, role) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  if (!appState.config.clerkPublishableKey) {
+    target.innerHTML = `<div class="config-card" data-testid="auth-config-missing-message"><strong>Auth configuration needed</strong><span>Clerk keys are not configured in this environment, so real signup cannot start yet.</span></div>`;
+    return;
+  }
+  if (!appState.clerk) {
+    target.innerHTML = `<div class="config-card" data-testid="auth-load-error-message"><strong>Auth unavailable</strong><span>Clerk could not load. Please check the frontend publishable key.</span></div>`;
+    return;
+  }
+  try {
+    target.innerHTML = '';
+    const props = {
+      routing: 'hash',
+      afterSignUpUrl: `/onboarding?role=${role}`,
+      afterSignInUrl: role === 'affiliate' ? '/affiliate' : '/dashboard',
+      unsafeMetadata: { role },
+    };
+    if (mode === 'signin') appState.clerk.mountSignIn(target, props);
+    else appState.clerk.mountSignUp(target, props);
+  } catch (error) {
+    target.innerHTML = `<div class="config-card" data-testid="auth-render-error-message"><strong>Auth render failed</strong><span>${error.message}</span></div>`;
+  }
+}
+
+function userNameFallback() {
+  const user = appState.currentUser;
+  return user?.fullName || user?.primaryEmailAddress?.emailAddress || 'SplitLink user';
+}
+
+function dashboardShell(role, content) {
+  const navItems = role === 'merchant'
+    ? [['/dashboard', 'Products'], ['/dashboard?tab=transactions', 'Transactions'], ['/dashboard/settings', 'Settings']]
+    : [['/affiliate', 'My Links'], ['/affiliate?tab=discover', 'Discover'], ['/affiliate/settings', 'Settings']];
+  return `
+    <main class="dashboard-layout ${role}-layout" data-testid="${role}-dashboard-page">
+      <aside class="dashboard-sidebar" data-testid="${role}-dashboard-sidebar">
+        <a class="brand" href="/" data-testid="${role}-dashboard-brand-link"><span class="brand-mark"></span><span>SplitLink</span></a>
+        <div class="mode-label" data-testid="${role}-dashboard-mode-label">${role === 'merchant' ? 'Merchant mode' : 'Affiliate mode'}</div>
+        <nav class="dashboard-nav" data-testid="${role}-dashboard-nav">
+          ${navItems.map(([href, label], index) => `<a href="${href}" class="${index === 0 ? 'active' : ''}" data-testid="${role}-dashboard-nav-${index + 1}">${label}</a>`).join('')}
+        </nav>
+        <div class="sidebar-user" data-testid="${role}-dashboard-user-card"><span>${userNameFallback()}</span><button type="button" id="sign-out-button" data-testid="${role}-dashboard-signout-button">Sign out</button></div>
+      </aside>
+      <section class="dashboard-main" data-testid="${role}-dashboard-main">
+        ${content}
+      </section>
+    </main>
+  `;
+}
+
+function statCards(role, cards) {
+  return `<div class="dashboard-stats" data-testid="${role}-dashboard-stat-cards">${cards.map((card, index) => `
+    <article class="dashboard-stat-card" data-testid="${role}-stat-card-${index + 1}">
+      <span data-testid="${role}-stat-label-${index + 1}">${card.label}</span>
+      <strong data-testid="${role}-stat-value-${index + 1}">${card.value}</strong>
+      <p data-testid="${role}-stat-note-${index + 1}">${card.note}</p>
+    </article>
+  `).join('')}</div>`;
+}
+
+function emptyState(role, title, copy, action = '') {
+  return `<div class="empty-state" data-testid="${role}-empty-state"><div class="icon-bubble large">${icon('spark')}</div><h3 data-testid="${role}-empty-state-title">${title}</h3><p data-testid="${role}-empty-state-copy">${copy}</p>${action}</div>`;
+}
+
+function productCard(product, index) {
+  const rate = Number(product.commissionRate || product.commission || 0);
+  const price = Number(product.price || 0);
+  const commission = price * (rate / 100);
+  return `
+    <article class="dashboard-product-card" data-testid="merchant-product-card-${index + 1}">
+      <div class="product-thumb product-${products[index % products.length].color}" data-testid="merchant-product-image-${index + 1}"></div>
+      <div class="dashboard-product-body">
+        <span class="badge dark" data-testid="merchant-product-status-${index + 1}">${product.status || 'active'}</span>
+        <h3 data-testid="merchant-product-title-${index + 1}">${product.title || 'Untitled product'}</h3>
+        <p data-testid="merchant-product-price-${index + 1}">${cents(price)} · ${rate}% commission (${cents(commission)})</p>
+        <div class="mini-metrics" data-testid="merchant-product-metrics-${index + 1}"><span>${product._count?.affiliateLinks || 0} active links</span><span>${product._count?.transactions || 0} sold</span></div>
+        <div class="card-actions"><button type="button" data-testid="merchant-product-edit-${index + 1}">Edit</button><button type="button" data-testid="merchant-product-toggle-${index + 1}">${product.status === 'paused' ? 'Activate' : 'Pause'}</button></div>
+      </div>
+    </article>
+  `;
+}
+
+function transactionRow(txn, index) {
+  return `<tr data-testid="merchant-transaction-row-${index + 1}"><td>${new Date(txn.createdAt || Date.now()).toLocaleDateString()}</td><td>${txn.product?.title || 'Product'}</td><td>${cents(txn.grossAmount)}</td><td>${cents(txn.merchantPayout)}</td><td>${cents(txn.affiliateCommission)}</td><td>${cents(txn.platformFee)}</td><td><span class="table-status">${txn.status || 'pending'}</span></td></tr>`;
+}
+
+async function requireDashboardAuth(role) {
+  if (!appState.config.clerkPublishableKey) {
+    return { ok: false, reason: 'config', message: 'Clerk is not configured, so real dashboard data cannot be loaded yet.' };
+  }
+  if (!appState.currentUser) {
+    return { ok: false, reason: 'signin', message: 'Sign in to load your SplitLink dashboard.' };
+  }
+  return { ok: true };
+}
+
+async function renderMerchantDashboard() {
+  const auth = await requireDashboardAuth('merchant');
+  if (!auth.ok) {
+    shell(dashboardShell('merchant', emptyState('merchant', auth.reason === 'config' ? 'Configuration needed' : 'Sign in required', auth.message, `<a class="pill-button" href="/signup?role=merchant" data-testid="merchant-dashboard-auth-action">Open merchant signup ${icon('arrow')}</a>`)));
+    bindDashboardActions();
+    return;
+  }
+  shell(dashboardShell('merchant', `<div class="dashboard-loading" data-testid="merchant-dashboard-loading">Loading merchant command center...</div>`));
+  bindDashboardActions();
+  let analytics = null;
+  let productPayload = null;
+  let transactionPayload = null;
+  let connectStatus = null;
+  let errorMessage = '';
+  try {
+    [analytics, productPayload, transactionPayload, connectStatus] = await Promise.all([
+      api('/api/analytics/merchant'),
+      api('/api/products'),
+      api('/api/analytics/transactions?role=merchant'),
+      api('/api/connect/status').catch(() => null),
+    ]);
+  } catch (error) {
+    errorMessage = error.message;
+  }
+  if (errorMessage) {
+    shell(dashboardShell('merchant', emptyState('merchant', 'Merchant data unavailable', errorMessage, `<button class="pill-button" type="button" id="retry-dashboard" data-testid="merchant-dashboard-retry-button">Retry ${icon('arrow')}</button>`)));
+    bindDashboardActions();
+    document.getElementById('retry-dashboard')?.addEventListener('click', renderMerchantDashboard);
+    return;
+  }
+  const productsList = productPayload?.products || [];
+  const txns = transactionPayload?.transactions || [];
+  const activeAffiliates = new Set(productsList.flatMap((p) => Array.from({ length: p._count?.affiliateLinks || 0 }, (_, i) => `${p.id}-${i}`))).size;
+  const tabs = new URLSearchParams(window.location.search).get('tab') === 'transactions' ? 'transactions' : 'products';
+  const content = `
+    <div class="dashboard-header" data-testid="merchant-dashboard-header"><div><span class="eyebrow">Command center</span><h1 data-testid="merchant-dashboard-title">Merchant dashboard</h1><p data-testid="merchant-dashboard-subtitle">Products, revenue, commissions, and payout readiness stay in one focused view.</p></div><a class="pill-button" href="/onboarding?role=merchant" data-testid="merchant-connect-status-button">${connectStatus?.onboardingComplete ? 'Stripe ready' : 'Connect Stripe'} ${icon('arrow')}</a></div>
+    ${statCards('merchant', [
+      { label: 'Total Revenue', value: cents(analytics?.totalRevenue), note: `${analytics?.transactionCount || 0} paid transactions` },
+      { label: 'Paid Out to You', value: cents(analytics?.totalMerchantPayout), note: 'After platform + affiliate split' },
+      { label: 'Commissions Paid', value: cents(analytics?.totalCommissionsPaid), note: 'Sent to affiliate partners' },
+      { label: 'Active Affiliates', value: String(activeAffiliates), note: 'Generated product links' },
+    ])}
+    <div class="dashboard-tabs" data-testid="merchant-dashboard-tabs"><a class="${tabs === 'products' ? 'active' : ''}" href="/dashboard" data-testid="merchant-products-tab">Products</a><a class="${tabs === 'transactions' ? 'active' : ''}" href="/dashboard?tab=transactions" data-testid="merchant-transactions-tab">Transactions</a><button type="button" data-testid="merchant-add-product-button">Add Product</button></div>
+    ${tabs === 'products' ? `<section class="product-grid" data-testid="merchant-products-grid">${productsList.length ? productsList.map(productCard).join('') : emptyState('merchant-products', 'No products yet', 'Once the backend has products for this merchant, they will appear here as cards with commission math.')}</section>` : `<section class="transaction-panel" data-testid="merchant-transactions-panel"><table data-testid="merchant-transactions-table"><thead><tr><th>Date</th><th>Product</th><th>Gross</th><th>Your payout</th><th>Affiliate</th><th>Fee</th><th>Status</th></tr></thead><tbody>${txns.length ? txns.map(transactionRow).join('') : `<tr><td colspan="7">No transactions returned by backend yet.</td></tr>`}</tbody></table></section>`}
+  `;
+  shell(dashboardShell('merchant', content));
+  bindDashboardActions();
+}
+
+function affiliateLinkCard(link, index) {
+  const product = link.product || {};
+  const clicks = link._count?.clicks || 0;
+  const conversions = link._count?.transactions || 0;
+  const rate = clicks ? ((conversions / clicks) * 100).toFixed(1) : '0.0';
+  const estimated = (Number(product.price || 0) * (Number(product.commissionRate || 0) / 100) * 5 * (Number(rate) / 100));
+  const url = `${window.location.origin}/p/${product.slug || 'product'}?ref=${link.refCode || 'REFCODE'}`;
+  return `<article class="affiliate-link-card" data-testid="affiliate-link-card-${index + 1}"><div class="product-thumb product-${products[index % products.length].color}"></div><div><span class="badge dark">${product.status || 'active'}</span><h3 data-testid="affiliate-link-title-${index + 1}">${product.title || 'Affiliate product'}</h3><div class="copy-row" data-testid="affiliate-link-url-${index + 1}"><span>${url}</span><button type="button" data-copy="${url}" data-testid="affiliate-link-copy-${index + 1}">Copy</button></div><div class="mini-metrics"><span>${clicks} clicks</span><span>${conversions} conversions</span><span>${rate}% rate</span></div><p class="simulator-line" data-testid="affiliate-link-simulator-${index + 1}">At your current ${rate}% conversion rate, 500 more clicks would earn about ${cents(estimated)}.</p></div></article>`;
+}
+
+function discoverCard(product, index) {
+  const price = Number(product.price || 0);
+  const rate = Number(product.commissionRate || 0);
+  const commission = price * (rate / 100);
+  return `<article class="discover-card" data-testid="affiliate-discover-card-${index + 1}"><div class="product-thumb product-${products[index % products.length].color}"></div><span class="verified">${product.merchant?.name || 'Merchant'}</span><h3 data-testid="affiliate-discover-title-${index + 1}">${product.title || 'Marketplace product'}</h3><p data-testid="affiliate-discover-commission-${index + 1}">${cents(price)} · Earn ${rate}% = ${cents(commission)}</p><p class="estimate" data-testid="affiliate-discover-estimate-${index + 1}">Estimated potential: ${cents(commission * 6)}/mo at platform-average conversion.</p><button type="button" class="pill-button wide" data-product-id="${product.id || ''}" data-testid="affiliate-generate-link-${index + 1}">Generate My Link ${icon('arrow')}</button></article>`;
+}
+
+async function renderAffiliateDashboard() {
+  const auth = await requireDashboardAuth('affiliate');
+  if (!auth.ok) {
+    shell(dashboardShell('affiliate', emptyState('affiliate', auth.reason === 'config' ? 'Configuration needed' : 'Sign in required', auth.message, `<a class="pill-button" href="/signup?role=affiliate" data-testid="affiliate-dashboard-auth-action">Open affiliate signup ${icon('arrow')}</a>`)));
+    bindDashboardActions();
+    return;
+  }
+  shell(dashboardShell('affiliate', `<div class="dashboard-loading" data-testid="affiliate-dashboard-loading">Loading affiliate earning hub...</div>`));
+  bindDashboardActions();
+  let analytics = null;
+  let linksPayload = null;
+  let productsPayload = null;
+  let errorMessage = '';
+  try {
+    [analytics, linksPayload, productsPayload] = await Promise.all([
+      api('/api/analytics/affiliate'),
+      api('/api/affiliate-links'),
+      api('/api/products'),
+    ]);
+  } catch (error) {
+    errorMessage = error.message;
+  }
+  if (errorMessage) {
+    shell(dashboardShell('affiliate', emptyState('affiliate', 'Affiliate data unavailable', errorMessage, `<button class="pill-button" type="button" id="retry-dashboard" data-testid="affiliate-dashboard-retry-button">Retry ${icon('arrow')}</button>`)));
+    bindDashboardActions();
+    document.getElementById('retry-dashboard')?.addEventListener('click', renderAffiliateDashboard);
+    return;
+  }
+  const tab = new URLSearchParams(window.location.search).get('tab') === 'discover' ? 'discover' : 'links';
+  const links = linksPayload?.links || [];
+  const marketplaceProducts = [...(productsPayload?.products || [])].sort((a, b) => (Number(b.price || 0) * Number(b.commissionRate || 0)) - (Number(a.price || 0) * Number(a.commissionRate || 0)));
+  const content = `
+    <div class="dashboard-header" data-testid="affiliate-dashboard-header"><div><span class="eyebrow">Earning hub</span><h1 data-testid="affiliate-dashboard-title">Affiliate dashboard</h1><p data-testid="affiliate-dashboard-subtitle">Your links, pending commissions, conversion signal, and product discovery stay separate from merchant work.</p></div><a class="pill-button" href="/onboarding?role=affiliate" data-testid="affiliate-connect-status-button">Connect payouts ${icon('arrow')}</a></div>
+    ${statCards('affiliate', [
+      { label: 'Total Earned', value: cents(analytics?.totalEarned), note: `${analytics?.transactionCount || 0} paid conversions` },
+      { label: 'Pending', value: cents((analytics?.totalEarned || 0) * 0.25), note: 'Held for 7 days before release' },
+      { label: 'Conversion Rate', value: `${analytics?.conversionRate || '0.0'}%`, note: `${analytics?.totalClicks || 0} tracked clicks` },
+      { label: 'Active Links', value: String(links.length), note: 'Generated product links' },
+    ])}
+    <div class="dashboard-tabs" data-testid="affiliate-dashboard-tabs"><a class="${tab === 'links' ? 'active' : ''}" href="/affiliate" data-testid="affiliate-links-tab">My Links</a><a class="${tab === 'discover' ? 'active' : ''}" href="/affiliate?tab=discover" data-testid="affiliate-discover-tab">Discover</a></div>
+    ${tab === 'links' ? `<section class="affiliate-link-grid" data-testid="affiliate-links-grid">${links.length ? links.map(affiliateLinkCard).join('') : emptyState('affiliate-links', 'No links generated yet', 'When backend returns affiliate links, each card will show URL, clicks, conversions, earnings, and a personalized simulator.')}</section>` : `<section class="discover-grid" data-testid="affiliate-discover-grid">${marketplaceProducts.length ? marketplaceProducts.map(discoverCard).join('') : emptyState('affiliate-discover', 'No products to discover yet', 'Existing /api/products returned no marketplace products for this affiliate.')}</section>`}
+    <div id="generate-modal" class="modal-backdrop" data-testid="affiliate-generate-modal" hidden></div>
+  `;
+  shell(dashboardShell('affiliate', content));
+  bindDashboardActions();
+  bindAffiliateActions();
+}
+
+function bindDashboardActions() {
+  const signOut = document.getElementById('sign-out-button');
+  signOut?.addEventListener('click', async () => {
+    if (appState.clerk) await appState.clerk.signOut();
+    window.location.href = '/';
+  });
+}
+
+function bindAffiliateActions() {
+  document.querySelectorAll('[data-copy]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      await navigator.clipboard?.writeText(button.dataset.copy || '');
+      button.textContent = 'Copied';
+    });
+  });
+  document.querySelectorAll('[data-product-id]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        const result = await api('/api/affiliate-links', { method: 'POST', body: JSON.stringify({ productId: button.dataset.productId }) });
+        const modal = document.getElementById('generate-modal');
+        modal.hidden = false;
+        const url = result?.url || `${window.location.origin}/p/product?ref=${result?.link?.refCode || 'REFCODE'}`;
+        modal.innerHTML = `<div class="share-modal" data-testid="affiliate-share-modal-card"><button type="button" class="modal-close" data-testid="affiliate-share-modal-close">×</button><h3 data-testid="affiliate-share-modal-title">Your link is ready</h3><div class="copy-row"><span data-testid="affiliate-share-modal-url">${url}</span><button type="button" data-copy="${url}" data-testid="affiliate-share-modal-copy">Copy</button></div><div class="qr-box" data-testid="affiliate-share-modal-qr">QR</div><p data-testid="affiliate-share-modal-calculator">If you drive 500 clicks/month at 3.2% conversion, you earn an estimated ${money(96)}/month.</p><div class="share-row" data-testid="affiliate-share-buttons"><button type="button">Twitter</button><button type="button">Instagram caption</button><button type="button">WhatsApp</button></div></div>`;
+        modal.querySelector('.modal-close').addEventListener('click', () => { modal.hidden = true; });
+        modal.querySelector('[data-copy]').addEventListener('click', async (event) => { await navigator.clipboard?.writeText(url); event.currentTarget.textContent = 'Copied'; });
+      } catch (error) {
+        button.textContent = error.message || 'Unavailable';
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
 }
 
 function nav() {
@@ -127,6 +464,16 @@ function renderLanding() {
         </div>
       </section>
 
+      <section class="family-lift-section" data-testid="family-inspired-section">
+        <div class="family-wordmark" data-testid="family-inspired-headline">Explore affiliate selling in a whole new way.</div>
+        <div class="family-grid" data-testid="family-inspired-grid">
+          ${['Easy|One clear role after signup.', 'Secure|Stripe Connect handles payout identity.', 'Fast|Links and buyer pages stay lightweight.', 'Powerful|Every dashboard shows the split clearly.'].map((item, index) => {
+            const [title, copy] = item.split('|');
+            return `<article class="family-card" data-testid="family-inspired-card-${index + 1}"><span>${icon(index === 0 ? 'spark' : index === 1 ? 'shield' : index === 2 ? 'arrow' : 'wallet')}</span><strong>${title}</strong><p>${copy}</p></article>`;
+          }).join('')}
+        </div>
+      </section>
+
       <section id="how-it-works" class="section" data-testid="how-it-works-section">
         <div class="section-heading split" data-testid="how-it-works-heading-block">
           <h2 data-testid="how-it-works-title">Two paths. One clean marketplace.</h2>
@@ -215,7 +562,8 @@ function renderSignup() {
           <label data-testid="signup-slug-label">Public slug<input id="slug-input" data-testid="signup-slug-input" type="text" value="alex-${role}" /></label>
           <div class="url-preview" data-testid="signup-url-preview"><span data-testid="signup-url-prefix">${urlBase}</span><strong id="slug-preview" data-testid="signup-url-slug">alex-${role}</strong></div>
           <div class="availability" data-testid="signup-availability-message">${icon('check')} <span>Available instantly</span></div>
-          <a class="pill-button wide" href="/onboarding?role=${role}" data-testid="signup-submit-button">Create account ${icon('arrow')}</a>
+          <div id="clerk-signup-mount" class="clerk-mount" data-testid="clerk-signup-mount"></div>
+          <a class="pill-button wide fallback-auth-link" href="/onboarding?role=${role}" data-testid="signup-submit-button">Preview onboarding ${icon('arrow')}</a>
           <p class="fine-print" data-testid="signup-verification-note">Next screen after email verification: connect your Stripe payout account.</p>
         </form>
       </section>
@@ -226,10 +574,31 @@ function renderSignup() {
   input.addEventListener('input', () => {
     preview.textContent = slugify(input.value);
   });
+  setupClerkMount('clerk-signup-mount', 'signup', role);
 }
 
-function renderOnboarding(success = false) {
+async function registerCurrentUser(role) {
+  if (!appState.currentUser) return { ok: false, message: 'Sign in first to create your SplitLink profile.' };
+  const slug = slugify(appState.currentUser.username || appState.currentUser.fullName || appState.currentUser.id || `${role}-user`);
+  const body = {
+    clerkId: appState.currentUser.id,
+    email: appState.currentUser.primaryEmailAddress?.emailAddress || '',
+    name: appState.currentUser.fullName || appState.currentUser.firstName || 'SplitLink user',
+    role,
+    slug,
+  };
+  try {
+    await api('/api/users/register', { method: 'POST', body: JSON.stringify(body) });
+    return { ok: true, message: 'Profile created.' };
+  } catch (error) {
+    if (error.status === 409) return { ok: true, message: 'Profile already exists.' };
+    return { ok: false, message: error.message };
+  }
+}
+
+async function renderOnboarding(success = false) {
   const role = getRole();
+  const registered = success ? null : await registerCurrentUser(role);
   shell(`
     <main class="onboarding-page" data-testid="onboarding-page">
       <section class="onboarding-card ${success ? 'success' : ''}" data-testid="${success ? 'onboarding-success-card' : 'onboarding-connect-card'}">
@@ -239,7 +608,7 @@ function renderOnboarding(success = false) {
           <span class="eyebrow" data-testid="onboarding-success-eyebrow">Stripe connected</span>
           <h1 data-testid="onboarding-success-title">You're ready to enter your ${role} dashboard.</h1>
           <p data-testid="onboarding-success-copy">Your payment account is connected, so revenue and commissions can move automatically when sales happen.</p>
-          <a class="pill-button wide" href="/" data-testid="onboarding-success-dashboard-button">Go to ${role} dashboard ${icon('arrow')}</a>
+          <a class="pill-button wide" href="${role === 'affiliate' ? '/affiliate' : '/dashboard'}" data-testid="onboarding-success-dashboard-button">Go to ${role} dashboard ${icon('arrow')}</a>
         ` : `
           <div class="icon-bubble large" data-testid="onboarding-stripe-icon">${icon('wallet')}</div>
           <span class="eyebrow" data-testid="onboarding-role-eyebrow">One more step</span>
@@ -248,16 +617,46 @@ function renderOnboarding(success = false) {
             ? 'Stripe lets you receive product revenue automatically after platform fees and affiliate commissions are calculated.'
             : 'Stripe lets you receive commissions securely after the 7-day pending period clears.'
           }</p>
-          <a class="pill-button wide" href="/onboarding/success?role=${role}" data-testid="onboarding-connect-stripe-button">Connect with Stripe ${icon('arrow')}</a>
+          ${registered ? `<div class="config-card ${registered.ok ? 'ready' : ''}" data-testid="onboarding-registration-status"><strong>${registered.ok ? 'Profile ready' : 'Profile setup needs auth'}</strong><span>${registered.message}</span></div>` : ''}
+          <button class="pill-button wide" type="button" id="connect-stripe-button" data-testid="onboarding-connect-stripe-button">Connect with Stripe ${icon('arrow')}</button>
+          <div id="onboarding-error" class="inline-error" data-testid="onboarding-error-message" hidden></div>
           <p class="fine-print" data-testid="onboarding-distraction-note">No navigation, no dashboard, no distractions until this is complete.</p>
         `}
       </section>
     </main>
   `);
+  if (!success) {
+    const button = document.getElementById('connect-stripe-button');
+    const errorBox = document.getElementById('onboarding-error');
+    button.addEventListener('click', async () => {
+      errorBox.hidden = true;
+      button.disabled = true;
+      button.innerHTML = `Opening Stripe ${icon('arrow')}`;
+      try {
+        const result = await api('/api/connect/onboard', { method: 'POST', body: JSON.stringify({}) });
+        if (result?.url) window.location.href = result.url;
+        else throw new Error('Stripe onboarding URL was not returned.');
+      } catch (error) {
+        errorBox.hidden = false;
+        errorBox.textContent = error.message || 'Unable to start Stripe onboarding.';
+        button.disabled = false;
+        button.innerHTML = `Connect with Stripe ${icon('arrow')}`;
+      }
+    });
+  }
 }
 
-function boot() {
+async function boot() {
+  await loadConfig();
+  await initAuth();
   const path = window.location.pathname;
+  if (path.startsWith('/dashboard')) return renderMerchantDashboard();
+  if (path.startsWith('/affiliate')) return renderAffiliateDashboard();
+  if (path.startsWith('/signin')) {
+    shell(`<main class="auth-page" data-testid="signin-page"><a class="brand auth-brand" href="/" data-testid="signin-brand-home-link"><span class="brand-mark"></span><span>SplitLink</span></a><section class="auth-card single" data-testid="signin-card"><div class="auth-copy"><span class="eyebrow">Welcome back</span><h1>Pick up where revenue left off.</h1><p>Sign in with the backend’s configured Clerk auth before loading dashboards.</p></div><div class="signup-form"><div id="clerk-signin-mount" class="clerk-mount" data-testid="clerk-signin-mount"></div></div></section></main>`);
+    setupClerkMount('clerk-signin-mount', 'signin', 'merchant');
+    return;
+  }
   if (path.startsWith('/signup')) return renderSignup();
   if (path.startsWith('/onboarding/success')) return renderOnboarding(true);
   if (path.startsWith('/onboarding')) return renderOnboarding(false);
