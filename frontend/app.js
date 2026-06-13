@@ -431,118 +431,105 @@ function stepCard(step, index, role) {
 function renderLanding() {
   shell(`
     ${nav()}
-    <main class="landing-page" data-testid="landing-page">
-      <section class="hero-section" data-testid="landing-hero-section">
-        <div class="announcement" data-testid="landing-announcement-banner">
-          <span data-testid="announcement-copy">Affiliate-native payment links for merchants, creators, and buyers</span>
-          <a href="#fee" data-testid="announcement-fee-link">See the 2% model</a>
-        </div>
-        <div class="hero-grid">
-          <div class="hero-copy">
-            <span class="eyebrow" data-testid="hero-eyebrow">One link. Three winners.</span>
-            <h1 data-testid="hero-headline">Sell more. <span>Share</span> the reward.</h1>
-            <p data-testid="hero-subheadline">SplitLink gives merchants polished product links, gives affiliates instant tracked commissions, and gives buyers a fast checkout page with no platform noise.</p>
-            <div class="hero-actions" data-testid="hero-role-cta-group">
-              <a class="pill-button" href="/signup?role=merchant" data-testid="hero-merchant-cta">I'm a Merchant ${icon('arrow')}</a>
-              <a class="outline-button" href="/signup?role=affiliate" data-testid="hero-affiliate-cta">I'm an Affiliate ${icon('arrow')}</a>
-            </div>
-            <div class="hero-stats" data-testid="hero-trust-stats">
-              <div data-testid="hero-stat-platform-fee"><strong>2%</strong><span>platform fee</span></div>
-              <div data-testid="hero-stat-payouts"><strong>Stripe</strong><span>powered splits</span></div>
-              <div data-testid="hero-stat-links"><strong>0</strong><span>monthly lock-in</span></div>
-            </div>
+    <main class="landing-page family-redesign" data-testid="landing-page">
+      <section class="family-hero" data-testid="landing-hero-section">
+        <div class="floating-blob blob-orange hero-blob-1" aria-hidden="true"><span></span></div>
+        <div class="floating-blob blob-green hero-blob-2" aria-hidden="true"><span></span></div>
+        <div class="floating-blob blob-blue hero-blob-3" aria-hidden="true"><span></span></div>
+        <div class="floating-coin coin-one" aria-hidden="true">2%</div>
+        <div class="floating-coin coin-two" aria-hidden="true">$</div>
+        <div class="hero-centerpiece" data-testid="hero-centerpiece">
+          <div class="tiny-proof-row" data-testid="hero-proof-row">
+            <span data-testid="hero-proof-fee">2% fee</span>
+            <span data-testid="hero-proof-checkout">Stripe-powered split</span>
+            <span data-testid="hero-proof-no-store">No storefront needed</span>
           </div>
-          <div class="hero-board" data-testid="hero-marketplace-preview">
-            <div class="board-top" data-testid="hero-board-header">
-              <span class="badge dark" data-testid="hero-board-badge">Live marketplace</span>
-              <span data-testid="hero-board-revenue">$18,420 routed</span>
-            </div>
-            <div class="floating-link-card" data-testid="hero-affiliate-link-card">
-              <div class="icon-bubble">${icon('link')}</div>
-              <div><span data-testid="hero-link-label">Affiliate link generated</span><strong data-testid="hero-link-url">splitlink.com/p/ritual-set?ref=K39V8</strong></div>
-            </div>
-            <div class="visual-stack" data-testid="hero-product-stack">
-              ${products.map(productVisual).join('')}
-            </div>
+          <h1 data-testid="hero-headline">Sell more.<br />Share the reward.</h1>
+          <p data-testid="hero-subheadline">SplitLink turns every product into a joyful affiliate-ready checkout link — merchants list once, affiliates share instantly, buyers get a page that only wants the sale.</p>
+          <div class="family-hero-actions" data-testid="hero-role-cta-group">
+            <a class="family-primary-btn" href="/signup?role=merchant" data-testid="hero-merchant-cta">I'm a Merchant ${icon('arrow')}</a>
+            <a class="family-secondary-btn" href="/signup?role=affiliate" data-testid="hero-affiliate-cta">I'm an Affiliate ${icon('arrow')}</a>
           </div>
         </div>
-      </section>
-
-      <section class="ticker-section" aria-label="Audience strip" data-testid="audience-ticker-section">
-        <div class="ticker" data-testid="audience-ticker">
-          <span>Merchants list</span><span>Affiliates share</span><span>Buyers checkout</span><span>Stripe splits</span><span>Everyone sees the math</span>
-          <span>Merchants list</span><span>Affiliates share</span><span>Buyers checkout</span><span>Stripe splits</span><span>Everyone sees the math</span>
+        <div class="hero-mini mini-left" data-testid="hero-mini-merchant-card">
+          <span>Merchant</span><strong>Set 20%</strong><small>Affiliates earn $16.80</small>
+        </div>
+        <div class="hero-mini mini-right" data-testid="hero-mini-affiliate-card">
+          <span>Affiliate</span><strong>Link ready</strong><small>split.link/ceramic?ref=K39V8</small>
         </div>
       </section>
 
-      <section class="family-lift-section" data-testid="family-inspired-section">
-        <div class="family-wordmark" data-testid="family-inspired-headline">Explore affiliate selling in a whole new way.</div>
-        <div class="family-grid" data-testid="family-inspired-grid">
-          ${['Easy|One clear role after signup.', 'Secure|Stripe Connect handles payout identity.', 'Fast|Links and buyer pages stay lightweight.', 'Powerful|Every dashboard shows the split clearly.'].map((item, index) => {
-            const [title, copy] = item.split('|');
-            return `<article class="family-card" data-testid="family-inspired-card-${index + 1}"><span>${icon(index === 0 ? 'spark' : index === 1 ? 'shield' : index === 2 ? 'arrow' : 'wallet')}</span><strong>${title}</strong><p>${copy}</p></article>`;
-          }).join('')}
+      <section class="family-action-strip" aria-label="Platform loop" data-testid="audience-ticker-section">
+        <div class="family-action-track" data-testid="audience-ticker">
+          <span>List product</span><span>Set commission</span><span>Generate link</span><span>Share anywhere</span><span>Buyer pays</span><span>Split happens</span>
+          <span>List product</span><span>Set commission</span><span>Generate link</span><span>Share anywhere</span><span>Buyer pays</span><span>Split happens</span>
         </div>
       </section>
 
-      <section id="how-it-works" class="section" data-testid="how-it-works-section">
-        <div class="section-heading split" data-testid="how-it-works-heading-block">
-          <h2 data-testid="how-it-works-title">Two paths. One clean marketplace.</h2>
-          <p data-testid="how-it-works-copy">Merchants and affiliates never fight the same dashboard. Each flow has one job and one next step.</p>
+      <section id="how-it-works" class="family-section" data-testid="how-it-works-section">
+        <div class="family-section-heading" data-testid="how-it-works-heading-block">
+          <p class="family-kicker" data-testid="how-it-works-kicker">Two journeys, zero collisions</p>
+          <h2 data-testid="how-it-works-title">One page does one job.</h2>
+          <p data-testid="how-it-works-copy">A merchant thinks in products. An affiliate thinks in links. SplitLink keeps both mental models in their own lane.</p>
         </div>
-        <div class="role-columns" data-testid="role-flow-columns">
-          <div class="role-panel" data-testid="merchant-flow-panel">
+        <div class="family-role-grid" data-testid="role-flow-columns">
+          <article class="journey-card merchant-journey" data-testid="merchant-flow-panel">
+            <div class="journey-character blob-orange" aria-hidden="true"><span></span></div>
             <div class="panel-title" data-testid="merchant-flow-title"><span>For merchants</span><strong>Products → Revenue</strong></div>
-            ${merchantSteps.map((step, index) => stepCard(step, index, 'merchant')).join('')}
-          </div>
-          <div class="role-panel dark-panel" data-testid="affiliate-flow-panel">
+            ${merchantSteps.map((step, index) => `<div class="family-step" data-testid="merchant-step-card-${index + 1}"><b data-testid="merchant-step-number-${index + 1}">0${index + 1}</b><div><h3 data-testid="merchant-step-title-${index + 1}">${step}</h3><p data-testid="merchant-step-copy-${index + 1}">${['Create a credible buyer page in minutes.', 'Choose a reward that makes sharing worth it.', 'Every tracked sale shows the split clearly.'][index]}</p></div></div>`).join('')}
+          </article>
+          <article class="journey-card affiliate-journey" data-testid="affiliate-flow-panel">
+            <div class="journey-character blob-blue" aria-hidden="true"><span></span></div>
             <div class="panel-title" data-testid="affiliate-flow-title"><span>For affiliates</span><strong>Links → Commission</strong></div>
-            ${affiliateSteps.map((step, index) => stepCard(step, index, 'affiliate')).join('')}
-          </div>
+            ${affiliateSteps.map((step, index) => `<div class="family-step" data-testid="affiliate-step-card-${index + 1}"><b data-testid="affiliate-step-number-${index + 1}">0${index + 1}</b><div><h3 data-testid="affiliate-step-title-${index + 1}">${step}</h3><p data-testid="affiliate-step-copy-${index + 1}">${['Find products with visible payout math.', 'Get a tracked URL made for sharing.', 'Watch clicks turn into held and released earnings.'][index]}</p></div></div>`).join('')}
+          </article>
         </div>
       </section>
 
-      <section id="fee" class="fee-section" data-testid="fee-transparency-section">
-        <div class="fee-card" data-testid="fee-breakdown-card">
-          <div>
-            <span class="eyebrow light" data-testid="fee-eyebrow">Trust signal</span>
-            <h2 data-testid="fee-headline">We take 2%. That's it.</h2>
-            <p data-testid="fee-copy">No monthly subscription, no hidden affiliate tax, no dashboard upsells. The reward is visible before signup and every product shows the split.</p>
-          </div>
-          <div class="fee-math" data-testid="fee-math-example">
-            <div data-testid="fee-row-buyer"><span>Buyer pays</span><strong>$100.00</strong></div>
-            <div data-testid="fee-row-affiliate"><span>Affiliate earns</span><strong>$20.00</strong></div>
-            <div data-testid="fee-row-platform"><span>SplitLink fee</span><strong>$2.00</strong></div>
-            <div class="total" data-testid="fee-row-merchant"><span>Merchant receives</span><strong>$78.00</strong></div>
-          </div>
+      <section id="fee" class="family-section split-fee-scene" data-testid="fee-transparency-section">
+        <div class="family-section-heading left" data-testid="fee-heading-block">
+          <p class="family-kicker" data-testid="fee-eyebrow">Transparent by default</p>
+          <h2 data-testid="fee-headline">We take <span>2%.</span><br />That's it.</h2>
+          <p data-testid="fee-copy">The math appears before signup, inside product cards, and inside transactions — no hidden affiliate tax or surprise platform cut.</p>
+        </div>
+        <div class="family-fee-device" data-testid="fee-breakdown-card">
+          <div class="device-top" data-testid="fee-device-title">Ceramic Ritual Set</div>
+          <div class="fee-device-row" data-testid="fee-row-buyer"><span>Buyer pays</span><strong>$100.00</strong></div>
+          <div class="fee-device-row orange" data-testid="fee-row-affiliate"><span>Affiliate earns</span><strong>$20.00</strong></div>
+          <div class="fee-device-row" data-testid="fee-row-platform"><span>SplitLink fee</span><strong>$2.00</strong></div>
+          <div class="fee-device-row total" data-testid="fee-row-merchant"><span>Merchant receives</span><strong>$78.00</strong></div>
         </div>
       </section>
 
-      <section id="preview" class="section preview-section" data-testid="buyer-preview-section">
-        <div class="section-heading" data-testid="buyer-preview-heading-block">
-          <h2 data-testid="buyer-preview-title">The page affiliates actually share.</h2>
-          <p data-testid="buyer-preview-copy">A buyer link should feel focused, credible, and fast. No app chrome. No distractions. Just the product and the purchase button.</p>
+      <section id="preview" class="family-section buyer-scene" data-testid="buyer-preview-section">
+        <div class="family-section-heading" data-testid="buyer-preview-heading-block">
+          <p class="family-kicker" data-testid="buyer-preview-kicker">The money page</p>
+          <h2 data-testid="buyer-preview-title">Shared links should feel delightful, not busy.</h2>
+          <p data-testid="buyer-preview-copy">No navigation. No related products. No account prompt. Just a beautiful product page and one strong checkout button.</p>
         </div>
-        <div class="buyer-preview" data-testid="buyer-product-page-preview">
-          <div class="buyer-image product-clay" data-testid="buyer-preview-product-image">
-            <div class="preview-badge" data-testid="buyer-preview-link-badge">Shared via affiliate link</div>
+        <div class="buyer-showcase" data-testid="buyer-product-page-preview">
+          <div class="buyer-art-card" data-testid="buyer-preview-product-image">
+            <div class="buyer-object" aria-hidden="true"></div>
+            <span data-testid="buyer-preview-link-badge">Affiliate link preview</span>
           </div>
-          <div class="buyer-content" data-testid="buyer-preview-content">
+          <div class="buyer-checkout-card" data-testid="buyer-preview-content">
             <span class="verified" data-testid="buyer-preview-merchant">Maison Kiln · Verified Merchant</span>
             <h3 data-testid="buyer-preview-product-title">Ceramic Ritual Set</h3>
-            <p data-testid="buyer-preview-description">A handcrafted trio for slower mornings: cup, pourer, and tray finished in warm matte clay.</p>
+            <p data-testid="buyer-preview-description">A handcrafted trio for slower mornings, finished in warm matte clay and packaged for gifting.</p>
             <div class="price-row" data-testid="buyer-preview-price-row"><strong data-testid="buyer-preview-price">$84.00</strong><span data-testid="buyer-preview-secure-copy">Secure checkout powered by Stripe</span></div>
-            <button class="pill-button wide" type="button" data-testid="buyer-preview-buy-button">Buy Now — $84.00 ${icon('arrow')}</button>
+            <button class="family-primary-btn wide" type="button" data-testid="buyer-preview-buy-button">Buy Now — $84.00 ${icon('arrow')}</button>
           </div>
         </div>
       </section>
 
-      <section class="cta-section" data-testid="final-cta-section">
+      <section class="family-final" data-testid="final-cta-section">
+        <div class="floating-blob blob-yellow final-blob" aria-hidden="true"><span></span></div>
+        <p class="family-kicker" data-testid="final-cta-kicker">Choose your path</p>
         <h2 data-testid="final-cta-title">Start with the role you actually play.</h2>
         <p data-testid="final-cta-copy">The first click sets the journey: product control for merchants, earning control for affiliates.</p>
-        <div class="hero-actions centered" data-testid="final-cta-button-group">
-          <a class="pill-button" href="/signup?role=merchant" data-testid="final-merchant-cta">Merchant signup ${icon('arrow')}</a>
-          <a class="outline-button" href="/signup?role=affiliate" data-testid="final-affiliate-cta">Affiliate signup ${icon('arrow')}</a>
+        <div class="family-hero-actions centered" data-testid="final-cta-button-group">
+          <a class="family-primary-btn" href="/signup?role=merchant" data-testid="final-merchant-cta">Merchant signup ${icon('arrow')}</a>
+          <a class="family-secondary-btn" href="/signup?role=affiliate" data-testid="final-affiliate-cta">Affiliate signup ${icon('arrow')}</a>
         </div>
       </section>
     </main>
