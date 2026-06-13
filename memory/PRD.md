@@ -46,3 +46,10 @@ Build the frontend UI for SplitLink, focused on a very intriguing landing page i
 ## Validation Update
 - Testing agent iteration 2 passed requested frontend scope: landing, signup/onboarding, merchant/affiliate dashboards, graceful missing-config behavior, data-testid coverage, and no horizontal overflow.
 - No backend APIs were mocked. Real API calls are attempted only when configured; otherwise friendly configuration states appear.
+
+
+## Update — Landing Page Redesign with Family.co Direction
+- User disliked the previous landing page and requested landing-only redesign using Family.co plus uploaded DESIGN (2).md.
+- Rebuilt landing hero and sections with warm cream canvas, playful floating blob characters, coin details, Fraunces display typography, Inter UI text, Family-style pill CTAs, inset card borders, and expressive motion.
+- Preserved required product messaging: merchant/affiliate self-identifying CTAs, role-separated how-it-works flow, transparent 2% fee math, buyer product page preview, and final role CTA.
+- Regression testing iteration 3 passed: desktop/mobile landing, nav, CTAs, no overflow, and non-landing route regression.
