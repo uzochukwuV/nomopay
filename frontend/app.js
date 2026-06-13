@@ -541,19 +541,27 @@ function renderSignup() {
   const title = role === 'merchant' ? 'Create your merchant storefront.' : 'Create your affiliate identity.';
   const urlBase = role === 'merchant' ? 'splitlink.com/store/' : 'splitlink.com/a/';
   shell(`
-    <main class="auth-page" data-testid="signup-page">
+    <main class="auth-page family-auth-page" data-testid="signup-page">
+      <div class="floating-blob blob-orange auth-blob-one" aria-hidden="true"><span></span></div>
+      <div class="floating-blob blob-green auth-blob-two" aria-hidden="true"><span></span></div>
+      <div class="floating-coin auth-coin" aria-hidden="true">${role === 'merchant' ? '$' : '%'}</div>
       <a class="brand auth-brand" href="/" data-testid="signup-brand-home-link"><span class="brand-mark"></span><span>SplitLink</span></a>
-      <section class="auth-card" data-testid="signup-card">
-        <div class="auth-copy" data-testid="signup-copy-panel">
-          <span class="eyebrow" data-testid="signup-role-eyebrow">${role === 'merchant' ? 'Merchant path selected' : 'Affiliate path selected'}</span>
+      <section class="auth-card family-auth-card" data-testid="signup-card">
+        <div class="auth-copy family-auth-story" data-testid="signup-copy-panel">
+          <span class="family-kicker" data-testid="signup-role-eyebrow">${role === 'merchant' ? 'Merchant path selected' : 'Affiliate path selected'}</span>
           <h1 data-testid="signup-title">${title}</h1>
-          <p data-testid="signup-description">Minimal setup, clear public URL, and a Stripe connection step after email verification.</p>
+          <p data-testid="signup-description">Pick your role, claim your public URL, then land on one focused Stripe step before any dashboard appears.</p>
+          <div class="auth-path-preview" data-testid="signup-path-preview-card">
+            <span data-testid="signup-path-label">Your public path</span>
+            <strong data-testid="signup-path-value">${urlBase}<em id="story-slug-preview">alex-${role}</em></strong>
+          </div>
           <div class="mode-switch" data-testid="signup-role-switcher">
             <a class="${role === 'merchant' ? 'active' : ''}" href="/signup?role=merchant" data-testid="signup-merchant-role-link">Merchant</a>
             <a class="${role === 'affiliate' ? 'active' : ''}" href="/signup?role=affiliate" data-testid="signup-affiliate-role-link">Affiliate</a>
           </div>
         </div>
-        <form class="signup-form" data-testid="signup-form">
+        <form class="signup-form family-auth-form" data-testid="signup-form">
+          <div class="form-header-note" data-testid="signup-form-header-note"><span>${icon('spark')}</span><strong>Keep it light. Four fields, then payouts.</strong></div>
           <label data-testid="signup-name-label">Name<input data-testid="signup-name-input" type="text" value="Alex Morgan" /></label>
           <label data-testid="signup-email-label">Email<input data-testid="signup-email-input" type="email" value="alex@splitlink.demo" /></label>
           <label data-testid="signup-password-label">Password<input data-testid="signup-password-input" type="password" value="12345678" /></label>
@@ -561,7 +569,7 @@ function renderSignup() {
           <div class="url-preview" data-testid="signup-url-preview"><span data-testid="signup-url-prefix">${urlBase}</span><strong id="slug-preview" data-testid="signup-url-slug">alex-${role}</strong></div>
           <div class="availability" data-testid="signup-availability-message">${icon('check')} <span>Available instantly</span></div>
           <div id="clerk-signup-mount" class="clerk-mount" data-testid="clerk-signup-mount"></div>
-          <a class="pill-button wide fallback-auth-link" href="/onboarding?role=${role}" data-testid="signup-submit-button">Preview onboarding ${icon('arrow')}</a>
+          <a class="family-primary-btn wide fallback-auth-link" href="/onboarding?role=${role}" data-testid="signup-submit-button">Preview onboarding ${icon('arrow')}</a>
           <p class="fine-print" data-testid="signup-verification-note">Next screen after email verification: connect your Stripe payout account.</p>
         </form>
       </section>
@@ -571,6 +579,8 @@ function renderSignup() {
   const preview = document.getElementById('slug-preview');
   input.addEventListener('input', () => {
     preview.textContent = slugify(input.value);
+    const storyPreview = document.getElementById('story-slug-preview');
+    if (storyPreview) storyPreview.textContent = slugify(input.value);
   });
   setupClerkMount('clerk-signup-mount', 'signup', role);
 }
@@ -598,27 +608,30 @@ async function renderOnboarding(success = false) {
   const role = getRole();
   const registered = success ? null : await registerCurrentUser(role);
   shell(`
-    <main class="onboarding-page" data-testid="onboarding-page">
-      <section class="onboarding-card ${success ? 'success' : ''}" data-testid="${success ? 'onboarding-success-card' : 'onboarding-connect-card'}">
+    <main class="onboarding-page family-onboarding-page" data-testid="onboarding-page">
+      <div class="floating-blob blob-blue onboard-blob-one" aria-hidden="true"><span></span></div>
+      <div class="floating-blob blob-yellow onboard-blob-two" aria-hidden="true"><span></span></div>
+      <section class="onboarding-card family-onboarding-card ${success ? 'success' : ''}" data-testid="${success ? 'onboarding-success-card' : 'onboarding-connect-card'}">
         <a class="brand" href="/" data-testid="onboarding-brand-home-link"><span class="brand-mark"></span><span>SplitLink</span></a>
         ${success ? `
-          <div class="success-mark" data-testid="onboarding-success-checkmark">${icon('check')}</div>
-          <span class="eyebrow" data-testid="onboarding-success-eyebrow">Stripe connected</span>
-          <h1 data-testid="onboarding-success-title">You're ready to enter your ${role} dashboard.</h1>
-          <p data-testid="onboarding-success-copy">Your payment account is connected, so revenue and commissions can move automatically when sales happen.</p>
-          <a class="pill-button wide" href="${role === 'affiliate' ? '/affiliate' : '/dashboard'}" data-testid="onboarding-success-dashboard-button">Go to ${role} dashboard ${icon('arrow')}</a>
+          <div class="success-mark family-success-mark" data-testid="onboarding-success-checkmark">${icon('check')}</div>
+          <span class="family-kicker" data-testid="onboarding-success-eyebrow">Stripe connected</span>
+          <h1 data-testid="onboarding-success-title">You're ready for ${role === 'affiliate' ? 'your earning hub' : 'your command center'}.</h1>
+          <p data-testid="onboarding-success-copy">The payout rail is ready. Now SplitLink can show the right dashboard without mixing roles or distracting you.</p>
+          <div class="onboarding-proof-row" data-testid="onboarding-success-proof-row"><span>Profile ready</span><span>Payouts linked</span><span>Mode selected</span></div>
+          <a class="family-primary-btn wide" href="${role === 'affiliate' ? '/affiliate' : '/dashboard'}" data-testid="onboarding-success-dashboard-button">Go to ${role} dashboard ${icon('arrow')}</a>
         ` : `
-          <div class="icon-bubble large" data-testid="onboarding-stripe-icon">${icon('wallet')}</div>
-          <span class="eyebrow" data-testid="onboarding-role-eyebrow">One more step</span>
+          <div class="family-wallet-scene" data-testid="onboarding-stripe-icon"><div class="wallet-face">${icon('wallet')}</div><span>Stripe</span></div>
+          <span class="family-kicker" data-testid="onboarding-role-eyebrow">One more step</span>
           <h1 data-testid="onboarding-title">Connect your payment account.</h1>
           <p data-testid="onboarding-description">${role === 'merchant'
-            ? 'Stripe lets you receive product revenue automatically after platform fees and affiliate commissions are calculated.'
-            : 'Stripe lets you receive commissions securely after the 7-day pending period clears.'
+            ? 'Stripe lets product revenue move automatically after the 2% platform fee and affiliate commissions are calculated.'
+            : 'Stripe lets commissions move securely after the 7-day pending period clears, so earnings never feel mysterious.'
           }</p>
           ${registered ? `<div class="config-card ${registered.ok ? 'ready' : ''}" data-testid="onboarding-registration-status"><strong>${registered.ok ? 'Profile ready' : 'Profile setup needs auth'}</strong><span>${registered.message}</span></div>` : ''}
-          <button class="pill-button wide" type="button" id="connect-stripe-button" data-testid="onboarding-connect-stripe-button">Connect with Stripe ${icon('arrow')}</button>
+          <button class="family-primary-btn wide" type="button" id="connect-stripe-button" data-testid="onboarding-connect-stripe-button">Connect with Stripe ${icon('arrow')}</button>
           <div id="onboarding-error" class="inline-error" data-testid="onboarding-error-message" hidden></div>
-          <p class="fine-print" data-testid="onboarding-distraction-note">No navigation, no dashboard, no distractions until this is complete.</p>
+          <div class="onboarding-proof-row" data-testid="onboarding-distraction-note"><span>No nav</span><span>No dashboard</span><span>No distractions</span></div>
         `}
       </section>
     </main>
