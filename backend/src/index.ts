@@ -15,6 +15,7 @@ import checkoutRouter from './routes/checkout.js';
 import webhooksRouter from './routes/webhooks.js';
 import analyticsRouter from './routes/analytics.js';
 import uploadsRouter from './routes/uploads.js';
+import shopifyRouter from './routes/shopify.js';
 
 const app = express();
 const PORT = process.env.PORT ?? 8080;
@@ -48,6 +49,7 @@ app.use('/api/connect', requireAuth, connectRouter);
 app.use('/api/uploads', requireAuth, uploadsRouter);
 app.use('/api/affiliate-links', requireAuth, affiliateLinksRouter);
 app.use('/api/analytics', analyticsRouter); // mixed public (click) + protected
+app.use('/api/shopify', requireAuth, shopifyRouter);
 
 // 404 + error handler — must be last
 app.use(notFound);
