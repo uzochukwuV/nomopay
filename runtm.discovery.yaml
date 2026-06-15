@@ -1,0 +1,30 @@
+description: |
+  SplitLink (nomopay) is an affiliate-native payment link platform that lets merchants sell products via Stripe while automatically attributing sales to affiliates and distributing commissions in real time. Merchants can import products from Shopify, set custom commission rates, and track revenue and payouts from a unified dashboard. Affiliates get unique referral links, live earnings tracking, and conversion analytics.
+
+summary: "Affiliate-native payment links with automatic commission splits for merchants and affiliates"
+
+capabilities:
+  - "Create shareable payment links with configurable affiliate commission rates"
+  - "Import products directly from Shopify with AI-enhanced descriptions"
+  - "Automated payment distribution via Stripe Connect (merchant, affiliate, platform)"
+  - "Real-time analytics: clicks, conversions, revenue, and commission tracking"
+  - "Stripe webhook-driven settlement with email notifications via Resend"
+  - "Multi-role user system: merchant, affiliate, or both"
+  - "Click deduplication and GDPR-compliant analytics (hashed-IP, no raw storage)"
+
+use_cases:
+  - "Merchants selling digital or physical products who want an affiliate channel without manual tracking"
+  - "Affiliates/creators who promote products and need transparent, real-time commission reporting"
+  - "Platforms looking to embed affiliate-split payment flows into their own storefront or Shopify store"
+
+tags:
+  - affiliate-marketing
+  - payments
+  - stripe
+  - shopify
+  - saas
+  - nextjs
+  - commission
+  - ecommerce
+  - referral
+  - typescript
