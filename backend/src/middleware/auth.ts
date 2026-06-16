@@ -14,6 +14,7 @@ export interface AuthenticatedRequest extends Request {
     stripeAccountId: string | null;
     stripeOnboardingComplete: boolean;
     slug: string;
+    phone: string | null;
   };
 }
 

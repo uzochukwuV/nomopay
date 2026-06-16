@@ -43,7 +43,7 @@ router.post('/onboard', requireAuth, async (req: Request, res: Response): Promis
   const accountLink = await stripe.accountLinks.create({
     account: stripeAccountId,
     refresh_url: `${frontendUrl}/dashboard/settings?onboarding=refresh`,
-    return_url: `${frontendUrl}/dashboard/settings?onboarding=complete`,
+    return_url: `${frontendUrl}/dashboard/ai-import?onboarding=true`,
     type: 'account_onboarding',
   });
 

@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { createClerkClient } from '@clerk/backend';
 import { prisma } from '../lib/prisma.js';
 import type { Request, Response } from 'express';
+import { requireAuth } from '../middleware/auth.js';
+import type { AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
@@ -54,12 +56,34 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
 // GET /api/users/me — returns authenticated user's profile
 router.get('/me', async (req: Request, res: Response): Promise<void> => {
-  const authReq = req as import('../middleware/auth.js').AuthenticatedRequest;
+  const authReq = req as AuthenticatedRequest;
   if (!authReq.user) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
   res.json({ user: authReq.user });
+});
+
+const UpdateMeSchema = z.object({
+  phone: z.string().min(1).max(30).optional(),
+  name: z.string().min(1).max(100).optional(),
+});
+
+// PATCH /api/users/me — update profile fields (phone, name)
+router.patch('/me', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const authReq = req as AuthenticatedRequest;
+  const parsed = UpdateMeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+
+  const user = await prisma.user.update({
+    where: { id: authReq.user!.id },
+    data: parsed.data,
+  });
+
+  res.json({ user });
 });
 
 export default router;
