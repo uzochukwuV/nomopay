@@ -7,9 +7,28 @@ import crypto from 'crypto';
 
 const router = Router();
 
-// POST /api/analytics/click — record a click server-side when buyer visits /p/:slug?ref=...
+function normalizeReferrer(raw: string | undefined): string {
+  if (!raw) return 'direct';
+  try {
+    const host = new URL(raw).hostname.replace(/^www\./, '');
+    if (/instagram\.com|l\.instagram\.com/.test(host)) return 'instagram';
+    if (/twitter\.com|t\.co|x\.com/.test(host)) return 'twitter';
+    if (/facebook\.com|m\.facebook\.com/.test(host)) return 'facebook';
+    if (/tiktok\.com/.test(host)) return 'tiktok';
+    if (/youtube\.com|youtu\.be/.test(host)) return 'youtube';
+    return 'other';
+  } catch {
+    return 'direct';
+  }
+}
+
+// POST /api/analytics/click — record a click when buyer visits /p/:slug?ref=...
 router.post('/click', async (req: Request, res: Response): Promise<void> => {
-  const { refCode, country } = req.body as { refCode?: string; country?: string };
+  const { refCode, country, referrer } = req.body as {
+    refCode?: string;
+    country?: string;
+    referrer?: string;
+  };
 
   if (!refCode) {
     res.status(400).json({ error: 'refCode required' });
@@ -42,6 +61,7 @@ router.post('/click', async (req: Request, res: Response): Promise<void> => {
         affiliateLinkId: affiliateLink.id,
         userAgent: req.headers['user-agent'] ?? null,
         country: country ?? (req.headers['cf-ipcountry'] as string) ?? null,
+        referrer: normalizeReferrer(referrer),
         clickHash,
       },
     });
@@ -148,6 +168,44 @@ router.get('/transactions', requireAuth, async (req: Request, res: Response): Pr
     transactions,
     nextCursor: transactions.length === pageSize ? transactions.at(-1)?.id : null,
   });
+});
+
+// GET /api/analytics/link-breakdown/:linkId — per-link click breakdown (heatmap + referrer)
+router.get('/link-breakdown/:linkId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const user = (req as AuthenticatedRequest).user!;
+  const linkId = String(req.params.linkId);
+
+  const link = await prisma.affiliateLink.findUnique({ where: { id: linkId } });
+  if (!link || link.affiliateId !== user.id) {
+    res.status(404).json({ error: 'Link not found' });
+    return;
+  }
+
+  const clicks = await prisma.click.findMany({
+    where: { affiliateLinkId: linkId },
+    select: { timestamp: true, referrer: true },
+  });
+
+  // Clicks by hour of day (0–23)
+  const byHour = Array.from({ length: 24 }, (_, h) => ({
+    hour: h,
+    count: clicks.filter((c) => new Date(c.timestamp).getUTCHours() === h).length,
+  }));
+
+  // Clicks by day of week (0=Sun … 6=Sat)
+  const byDay = Array.from({ length: 7 }, (_, d) => ({
+    day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d],
+    count: clicks.filter((c) => new Date(c.timestamp).getUTCDay() === d).length,
+  }));
+
+  // Referrer breakdown
+  const referrerCounts: Record<string, number> = {};
+  for (const c of clicks) {
+    const r = c.referrer ?? 'direct';
+    referrerCounts[r] = (referrerCounts[r] ?? 0) + 1;
+  }
+
+  res.json({ total: clicks.length, byHour, byDay, referrerCounts });
 });
 
 export default router;

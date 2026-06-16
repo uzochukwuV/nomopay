@@ -41,7 +41,15 @@ function CheckIcon() {
   );
 }
 
-export default function SignUpForm({ initialRole }: { initialRole: Role }) {
+export default function SignUpForm({
+  initialRole,
+  lockRole = false,
+  inviterName,
+}: {
+  initialRole: Role;
+  lockRole?: boolean;
+  inviterName?: string;
+}) {
   const router = useRouter();
   const { signUp, setActive } = useSignUp();
   const [role, setRole] = useState<Role>(initialRole);
@@ -153,45 +161,64 @@ export default function SignUpForm({ initialRole }: { initialRole: Role }) {
       className="rounded-3xl p-10 sm:p-12 flex flex-col gap-3.5 bg-card"
       style={{ boxShadow: "var(--shadow-card)" }}
     >
-      {/* Header note */}
-      <div
-        className="flex items-center gap-3 p-3.5 rounded-2xl mb-1"
-        style={{ background: "var(--parchment)" }}
-      >
-        <span
-          className="w-9 h-9 rounded-[13px] flex items-center justify-center flex-shrink-0 text-base"
-          style={{ background: "var(--sun)" }}
-          aria-hidden="true"
+      {/* Invite banner or header note */}
+      {inviterName ? (
+        <div
+          className="flex items-center gap-3 p-3.5 rounded-2xl mb-1"
+          style={{ background: "#eefaf2" }}
         >
-          ✦
-        </span>
-        <strong className="text-midnight text-[13px] font-bold">
-          Keep it light. Four fields, then payouts.
-        </strong>
-      </div>
-
-      {/* Role selector (mobile only) */}
-      <div className="grid grid-cols-3 gap-2 md:hidden">
-        {(["merchant", "affiliate", "both"] as Role[]).map((r) => (
-          <button
-            key={r}
-            type="button"
-            onClick={() => setRole(r)}
-            className="px-2 py-2.5 rounded-2xl text-[12px] font-bold capitalize transition-colors"
-            style={
-              role === r
-                ? { background: "var(--midnight)", color: "#fff" }
-                : {
-                    background: "var(--parchment)",
-                    color: "var(--graphite)",
-                    boxShadow: "var(--shadow-card)",
-                  }
-            }
+          <span
+            className="w-9 h-9 rounded-[13px] flex items-center justify-center flex-shrink-0 text-base font-bold"
+            style={{ background: "var(--earn)", color: "#fff" }}
           >
-            {r}
-          </button>
-        ))}
-      </div>
+            {inviterName[0].toUpperCase()}
+          </span>
+          <strong className="text-[13px] font-bold" style={{ color: "#16602b" }}>
+            You&apos;ve been invited by {inviterName} to earn commissions.
+          </strong>
+        </div>
+      ) : (
+        <div
+          className="flex items-center gap-3 p-3.5 rounded-2xl mb-1"
+          style={{ background: "var(--parchment)" }}
+        >
+          <span
+            className="w-9 h-9 rounded-[13px] flex items-center justify-center flex-shrink-0 text-base"
+            style={{ background: "var(--sun)" }}
+            aria-hidden="true"
+          >
+            ✦
+          </span>
+          <strong className="text-midnight text-[13px] font-bold">
+            Keep it light. Four fields, then payouts.
+          </strong>
+        </div>
+      )}
+
+      {/* Role selector (mobile only, hidden when role is locked) */}
+      {!lockRole && (
+        <div className="grid grid-cols-3 gap-2 md:hidden">
+          {(["merchant", "affiliate", "both"] as Role[]).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRole(r)}
+              className="px-2 py-2.5 rounded-2xl text-[12px] font-bold capitalize transition-colors"
+              style={
+                role === r
+                  ? { background: "var(--midnight)", color: "#fff" }
+                  : {
+                      background: "var(--parchment)",
+                      color: "var(--graphite)",
+                      boxShadow: "var(--shadow-card)",
+                    }
+              }
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Name */}
       <label className="grid gap-2">

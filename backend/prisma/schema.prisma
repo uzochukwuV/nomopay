@@ -120,6 +120,7 @@ model Click {
   timestamp       DateTime      @default(now())
   userAgent       String?
   country         String?
+  referrer        String?       // normalized: instagram | whatsapp | twitter | facebook | direct | other
   // hashed (affiliateLinkId + IP + day) for dedup — raw IP never stored (GDPR)
   clickHash       String?
 

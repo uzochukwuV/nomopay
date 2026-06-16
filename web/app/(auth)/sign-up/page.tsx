@@ -4,11 +4,19 @@ import Link from "next/link";
 export default async function SignUpPage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string }>;
+  searchParams: Promise<{ role?: string; inviterSlug?: string; inviterName?: string }>;
 }) {
-  const { role } = await searchParams;
-  const initialRole =
-    role === "affiliate" ? "affiliate" : role === "both" ? "both" : "merchant";
+  const { role, inviterSlug, inviterName } = await searchParams;
+
+  // Invite links lock the role to affiliate
+  const isInvite = Boolean(inviterSlug);
+  const initialRole = isInvite
+    ? "affiliate"
+    : role === "affiliate"
+    ? "affiliate"
+    : role === "both"
+    ? "both"
+    : "merchant";
 
   const title =
     initialRole === "affiliate"
@@ -74,45 +82,70 @@ export default async function SignUpPage({
           className="auth-story-card rounded-3xl p-12 flex-col justify-between min-h-[580px] hidden md:flex"
           style={{ background: "var(--parchment)", color: "var(--graphite)" }}
         >
-          {/* Role switcher */}
-          <div
-            className="flex gap-2 p-1.5 rounded-full w-fit"
-            style={{ background: "#fff", boxShadow: "var(--shadow-card)" }}
-          >
-            <Link
-              href="/sign-up?role=merchant"
-              className="px-3.5 py-2.5 rounded-full text-[13px] font-bold transition-colors"
-              style={
-                initialRole === "merchant"
-                  ? { background: "var(--midnight)", color: "#fff" }
-                  : { color: "var(--graphite)" }
-              }
+          {/* Role switcher — hidden when arriving via invite */}
+          {!isInvite && (
+            <div
+              className="flex gap-2 p-1.5 rounded-full w-fit"
+              style={{ background: "#fff", boxShadow: "var(--shadow-card)" }}
             >
-              Merchant
-            </Link>
-            <Link
-              href="/sign-up?role=affiliate"
-              className="px-3.5 py-2.5 rounded-full text-[13px] font-bold transition-colors"
-              style={
-                initialRole === "affiliate"
-                  ? { background: "var(--midnight)", color: "#fff" }
-                  : { color: "var(--graphite)" }
-              }
+              <Link
+                href="/sign-up?role=merchant"
+                className="px-3.5 py-2.5 rounded-full text-[13px] font-bold transition-colors"
+                style={
+                  initialRole === "merchant"
+                    ? { background: "var(--midnight)", color: "#fff" }
+                    : { color: "var(--graphite)" }
+                }
+              >
+                Merchant
+              </Link>
+              <Link
+                href="/sign-up?role=affiliate"
+                className="px-3.5 py-2.5 rounded-full text-[13px] font-bold transition-colors"
+                style={
+                  initialRole === "affiliate"
+                    ? { background: "var(--midnight)", color: "#fff" }
+                    : { color: "var(--graphite)" }
+                }
+              >
+                Affiliate
+              </Link>
+              <Link
+                href="/sign-up?role=both"
+                className="px-3.5 py-2.5 rounded-full text-[13px] font-bold transition-colors"
+                style={
+                  initialRole === "both"
+                    ? { background: "var(--midnight)", color: "#fff" }
+                    : { color: "var(--graphite)" }
+                }
+              >
+                Both
+              </Link>
+            </div>
+          )}
+
+          {/* Invite banner on story panel */}
+          {isInvite && inviterName && (
+            <div
+              className="flex items-center gap-3 p-4 rounded-2xl"
+              style={{ background: "#eefaf2", border: "1px solid #a3dab5" }}
             >
-              Affiliate
-            </Link>
-            <Link
-              href="/sign-up?role=both"
-              className="px-3.5 py-2.5 rounded-full text-[13px] font-bold transition-colors"
-              style={
-                initialRole === "both"
-                  ? { background: "var(--midnight)", color: "#fff" }
-                  : { color: "var(--graphite)" }
-              }
-            >
-              Both
-            </Link>
-          </div>
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold shrink-0"
+                style={{ background: "var(--earn)", color: "#fff" }}
+              >
+                {inviterName[0].toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-bold" style={{ color: "#16602b" }}>
+                  You&apos;ve been invited by {inviterName}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: "#4a7c59" }}>
+                  Sign up to start earning commissions promoting their products.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 flex flex-col justify-center py-8">
             <p
@@ -180,6 +213,8 @@ export default async function SignUpPage({
         {/* Form panel */}
         <SignUpForm
           initialRole={initialRole as "merchant" | "affiliate" | "both"}
+          lockRole={isInvite}
+          inviterName={inviterName}
         />
       </section>
     </main>
