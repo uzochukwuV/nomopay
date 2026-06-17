@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
+import { backendApiUrl } from "@/app/lib/api";
 
 // Icons
 function OverviewIcon() {
@@ -96,7 +97,7 @@ async function getUserRole(): Promise<{ role: string; name: string }> {
     const token = await getToken();
     if (!token) return { role: "merchant", name: "" };
 
-    const res = await fetch("http://localhost:8080/api/users/me", {
+    const res = await fetch(backendApiUrl("/api/users/me"), {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });

@@ -1,7 +1,7 @@
 FROM node:20-alpine
 
 WORKDIR /app
-
+RUN apk add --no-cache openssl
 RUN npm install -g pnpm@10
 
 # Backend dependencies and build
@@ -10,8 +10,9 @@ COPY backend/prisma ./backend/prisma
 WORKDIR /app/backend
 RUN npm ci
 COPY backend ./
-ENV DATABASE_URL=postgresql://user:password@localhost:5432/splitlink
+ENV DATABASE_URL=${DATABASE_URL}
 RUN npx prisma generate
+RUN npm install -D typescript
 RUN npm run build
 
 # Web dependencies and build
@@ -33,5 +34,7 @@ ENV PORT=3000
 ENV BACKEND_PORT=3001
 
 EXPOSE 3000
+EXPOSE 3001
+EXPOSE 8080
 
 CMD ["sh", "-c", "cd /app/backend && PORT=${BACKEND_PORT:-3001} node dist/index.js & cd /app/web && PORT=${PORT:-3000} pnpm start"]
