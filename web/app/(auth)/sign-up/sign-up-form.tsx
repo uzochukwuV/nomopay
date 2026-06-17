@@ -127,7 +127,6 @@ export default function SignUpForm({
       const result = (await signUp.password({
         emailAddress: email,
         password,
-        firstName: name,
       })) as ClerkActionResult;
 
       if (result.error) {
