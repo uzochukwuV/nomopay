@@ -13,7 +13,13 @@ router.post('/onboard', requireAuth, async (req: Request, res: Response): Promis
     const user = (req as AuthenticatedRequest).user!;
     const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
     const isAffiliate = user.role === 'affiliate';
-    const returnPath = isAffiliate ? '/dashboard/discover?onboarding=true' : '/dashboard/ai-import?onboarding=true';
+    const requestedReturnPath = typeof req.body?.returnPath === 'string' ? req.body.returnPath : null;
+    const returnPath =
+      requestedReturnPath?.startsWith('/dashboard')
+        ? requestedReturnPath
+        : isAffiliate
+        ? '/dashboard/discover?onboarding=true'
+        : '/dashboard/ai-import?onboarding=true';
 
     let stripeAccountId = user.stripeAccountId;
 
