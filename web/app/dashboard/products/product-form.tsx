@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSafeAuth } from "@/app/lib/use-safe-clerk";
 import { useRouter } from "next/navigation";
 import { computeFeeBreakdown, formatCents } from "../../lib/fees";
 
@@ -29,7 +29,7 @@ function slugify(value: string) {
 
 export default function ProductForm({ mode, initial }: { mode: "create" | "edit"; initial?: ProductInput }) {
   const router = useRouter();
-  const { getToken } = useAuth();
+  const { getToken } = useSafeAuth();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [price, setPrice] = useState(((initial?.price ?? 1000) / 100).toFixed(2));
@@ -139,4 +139,3 @@ export default function ProductForm({ mode, initial }: { mode: "create" | "edit"
     </form>
   );
 }
-

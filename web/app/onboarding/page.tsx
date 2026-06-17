@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSafeAuth } from "@/app/lib/use-safe-clerk";
 
 function ArrowIcon() {
   return (
@@ -44,7 +44,7 @@ function WalletIcon() {
 function OnboardingContent() {
   const params = useSearchParams();
   const role = params.get("role") === "affiliate" ? "affiliate" : "merchant";
-  const { getToken } = useAuth();
+  const { getToken } = useSafeAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 

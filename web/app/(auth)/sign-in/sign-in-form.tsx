@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useClerk, useSignIn } from "@clerk/nextjs";
+import { useSafeClerk, useSafeSignIn } from "@/app/lib/use-safe-clerk";
 
 function ArrowIcon() {
   return (
@@ -24,8 +24,8 @@ function ArrowIcon() {
 
 export default function SignInForm() {
   const router = useRouter();
-  const { signIn } = useSignIn();
-  const { setActive } = useClerk();
+  const { signIn } = useSafeSignIn();
+  const { setActive } = useSafeClerk();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);

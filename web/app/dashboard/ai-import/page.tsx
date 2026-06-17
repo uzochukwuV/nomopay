@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useRef, useCallback } from "react";
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useSafeAuth, useSafeUser } from "@/app/lib/use-safe-clerk";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { computeFeeBreakdown, formatCents } from "@/app/lib/fees";
@@ -331,8 +331,8 @@ function ProductCard({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 function AiImportContent() {
-  const { getToken } = useAuth();
-  const { user } = useUser();
+  const { getToken } = useSafeAuth();
+  const { user } = useSafeUser();
   const searchParams = useSearchParams();
   const isOnboarding = searchParams.get("onboarding") === "true";
 
