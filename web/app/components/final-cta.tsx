@@ -42,17 +42,17 @@ export default function FinalCta() {
         className="m-0 mb-3 text-[14px] font-semibold tracking-[-0.18px]"
         style={{ color: "var(--accent)" }}
       >
-        Choose your path
+          Built for the merchants marketplaces miss
       </p>
       <h2
         className="m-0 text-midnight leading-[1.04] tracking-[-0.038em] font-semibold"
         style={{ fontSize: "clamp(40px, 5.4vw, 68px)" }}
       >
-        Start with the role you actually play.
+        Stop guessing which creators drive customers.
       </h2>
       <p className="max-w-[570px] mx-auto mt-4 text-[17px] leading-[1.5] tracking-[-0.22px] text-graphite">
-        The first click sets the journey: product control for merchants, earning
-        control for affiliates.
+        Add your product, invite the creators you already know, and let every
+        paid checkout prove who deserves commission.
       </p>
 
       <div className="flex flex-wrap justify-center gap-2.5 mt-8">
@@ -61,7 +61,7 @@ export default function FinalCta() {
           className="flex items-center gap-2 min-h-[46px] px-5 rounded-full text-[14px] font-semibold text-white transition-all hover:-translate-y-0.5 hover:shadow-md"
           style={{ background: "var(--midnight)" }}
         >
-          Merchant signup
+          Start merchant setup
           <ArrowIcon />
         </Link>
         <Link
@@ -69,7 +69,7 @@ export default function FinalCta() {
           className="flex items-center gap-2 min-h-[46px] px-5 rounded-full text-[14px] font-semibold text-midnight transition-all hover:-translate-y-0.5"
           style={{ background: "#f6f4ef", boxShadow: "var(--shadow-card)" }}
         >
-          Affiliate signup
+          Join as creator
           <ArrowIcon />
         </Link>
       </div>

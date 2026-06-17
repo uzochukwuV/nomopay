@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { stripe, PLATFORM_FEE_RATE } from '../lib/stripe.js';
 import { prisma } from '../lib/prisma.js';
 import { sendSaleNotification, sendCommissionNotification } from '../lib/email.js';
+import { publishDashboardEvent } from '../lib/events.js';
 
 const router = Router();
 
@@ -90,8 +91,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session): Promise
       ? session.payment_intent
       : (session.payment_intent?.id ?? session.id);
 
-  const transferGroup = (session.payment_intent as Stripe.PaymentIntent | null)?.transfer_group
-    ?? `session_${session.id}`;
+  const transferGroup = session.metadata?.transferGroup ?? `session_${session.id}`;
 
   let affiliateLink: Awaited<ReturnType<typeof prisma.affiliateLink.findUnique>> | null = null;
   let affiliate: { id: string; email: string; name: string; stripeAccountId: string | null } | null = null;
@@ -150,7 +150,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session): Promise
   }
 
   // Record the transaction
-  await prisma.transaction.create({
+  const transaction = await prisma.transaction.create({
     data: {
       stripePaymentIntentId: paymentIntentId,
       stripeCheckoutSessionId: session.id,
@@ -169,6 +169,12 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session): Promise
       affiliateTransferId,
       transferGroup,
     },
+  });
+  publishDashboardEvent({
+    type: 'transaction.created',
+    merchantId: product.merchant.id,
+    affiliateId: affiliate?.id ?? null,
+    transactionId: transaction.id,
   });
 
   // Send notifications (fire-and-forget — don't fail the webhook on email error)
@@ -232,6 +238,12 @@ async function handleRefund(charge: Stripe.Charge): Promise<void> {
   await prisma.transaction.update({
     where: { id: transaction.id },
     data: { status: 'refunded' },
+  });
+  publishDashboardEvent({
+    type: 'transaction.refunded',
+    merchantId: transaction.merchantId,
+    affiliateId: transaction.affiliateId,
+    transactionId: transaction.id,
   });
 }
 

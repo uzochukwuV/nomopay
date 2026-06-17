@@ -68,7 +68,7 @@ export default function Hero() {
       >
         {/* Social proof pills */}
         <div className="flex flex-wrap justify-center gap-2 mb-6">
-          {["2% fee", "Stripe-powered split", "No storefront needed"].map((text) => (
+          {["For independent merchants", "Pay creators after real sales", "Stripe-powered checkout"].map((text) => (
             <span
               key={text}
               className="px-2.5 py-2 rounded-[10px] text-[12px] font-semibold bg-card text-charcoal"
@@ -87,9 +87,9 @@ export default function Hero() {
             fontSize: "clamp(58px, 9.2vw, 112px)",
           }}
         >
-          Sell more.
+          Creator sales.
           <br />
-          Share the reward.
+          Paid on proof.
         </h1>
 
         {/* Subheadline */}
@@ -97,9 +97,10 @@ export default function Hero() {
           className="max-w-[590px] mx-auto mt-6 text-[17px] leading-[1.52] tracking-[-0.01em] text-graphite"
           style={{ fontFamily: "var(--font-inter, sans-serif)" }}
         >
-          SplitLink turns every product into an affiliate-ready checkout link —
-          merchants list once, affiliates share instantly, buyers see a page
-          that only wants the sale.
+          SplitLink gives small merchants tracked checkout links for creators.
+          When a customer buys through a creator&apos;s link, the commission is
+          recorded automatically so nobody has to trust screenshots,
+          spreadsheets, or manual transfers.
         </p>
 
         {/* CTAs */}
@@ -109,7 +110,7 @@ export default function Hero() {
             className="flex items-center gap-2 min-h-[46px] px-5 rounded-full text-[14px] font-semibold text-white transition-all hover:-translate-y-0.5 hover:shadow-md"
             style={{ background: "var(--midnight)" }}
           >
-            I&apos;m a Merchant
+            Start as a merchant
             <ArrowIcon />
           </Link>
           <Link
@@ -117,7 +118,7 @@ export default function Hero() {
             className="flex items-center gap-2 min-h-[46px] px-5 rounded-full text-[14px] font-semibold text-midnight transition-all hover:-translate-y-0.5"
             style={{ background: "#f6f4ef", boxShadow: "var(--shadow-card)" }}
           >
-            I&apos;m an Affiliate
+            Join as a creator
             <ArrowIcon />
           </Link>
         </div>
@@ -136,10 +137,10 @@ export default function Hero() {
           Merchant
         </span>
         <strong className="block mt-1.5 text-charcoal text-[23px] tracking-[-0.44px] font-semibold">
-          Set 20%
+          Set 15%
         </strong>
         <small className="block mt-1.5 text-ash text-sm leading-snug">
-          Affiliates earn $16.80
+          Creator earns only after checkout
         </small>
       </div>
 
@@ -152,13 +153,13 @@ export default function Hero() {
         }}
       >
         <span className="text-[12px] font-bold" style={{ color: "var(--accent)" }}>
-          Affiliate
+          Creator
         </span>
         <strong className="block mt-1.5 text-charcoal text-[23px] tracking-[-0.44px] font-semibold">
-          Link ready
+          Proof link
         </strong>
         <small className="block mt-1.5 text-ash text-sm leading-snug">
-          split.link/ceramic?ref=K39V8
+          split.link/tote?ref=AMA25
         </small>
       </div>
     </section>

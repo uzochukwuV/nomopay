@@ -83,3 +83,26 @@ export async function sendInviteEmail(opts: {
     `,
   });
 }
+
+export async function sendBuyerTrackingEmail(opts: {
+  buyerEmail: string;
+  productTitle: string;
+  merchantName: string;
+  trackingUrl: string;
+  note?: string | null;
+}) {
+  if (!resend) return;
+  await resend.emails.send({
+    from: FROM,
+    to: opts.buyerEmail,
+    subject: `Shipping update for "${opts.productTitle}"`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#111;">
+        <h2>Your order has shipped</h2>
+        <p><strong>${opts.merchantName}</strong> marked <strong>${opts.productTitle}</strong> as shipped.</p>
+        <p><a href="${opts.trackingUrl}" style="background:#111;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:600;display:inline-block;">Track your order</a></p>
+        ${opts.note ? `<p style="color:#555;">${opts.note}</p>` : ''}
+      </div>
+    `,
+  });
+}

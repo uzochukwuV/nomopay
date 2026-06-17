@@ -1,10 +1,11 @@
 const STEPS = [
-  "List product",
-  "Set commission",
-  "Generate link",
-  "Share anywhere",
+  "Add a product",
+  "Set the commission",
+  "Invite a creator",
+  "Creator shares link",
   "Buyer pays",
-  "Split happens",
+  "Commission is tracked",
+  "Merchant sees proof",
 ];
 
 export default function Ticker() {

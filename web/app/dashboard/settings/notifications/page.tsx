@@ -79,7 +79,7 @@ export default function NotificationsPage() {
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
               />
               <p className="text-xs text-gray-400 mt-1.5">
-                Include country code. We'll send a ping here when you make a sale.
+                Include country code. We&apos;ll send a ping here when you make a sale.
               </p>
             </div>
 
@@ -90,7 +90,7 @@ export default function NotificationsPage() {
                 </svg>
                 <div>
                   <p className="text-xs font-medium text-amber-800">Email notifications are already active</p>
-                  <p className="text-xs text-amber-700 mt-0.5">WhatsApp/SMS alerts are coming soon — saving your number now means you'll be first when it ships.</p>
+                  <p className="text-xs text-amber-700 mt-0.5">WhatsApp/SMS alerts are coming soon — saving your number now means you&apos;ll be first when it ships.</p>
                 </div>
               </div>
             </div>

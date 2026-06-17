@@ -1,30 +1,30 @@
 const MERCHANT_STEPS = [
   {
-    title: "List your product",
-    copy: "Create a credible buyer page in minutes — image, description, price, and commission in one form.",
+    title: "Add the product you already sell",
+    copy: "Create a clean checkout page with name, image, price, and the commission you are willing to pay.",
   },
   {
-    title: "Set your commission",
-    copy: "Choose a reward that makes sharing worth it. Watch the live fee breakdown update as you slide.",
+    title: "Invite creators you already know",
+    copy: "Send a creator a signup link tied to your business. They get their own tracked link without asking you for a manual code.",
   },
   {
-    title: "Watch affiliates promote it",
-    copy: "Every tracked sale shows the split clearly. No spreadsheets, no manual transfers, no trust issues.",
+    title: "Pay only when buyers show up",
+    copy: "Every sale records the product, creator, commission, and payout. You can see who actually brought customers.",
   },
 ];
 
 const AFFILIATE_STEPS = [
   {
-    title: "Browse products",
-    copy: "Find products with visible payout math — dollar amounts, not just percentages.",
+    title: "Accept the merchant invite",
+    copy: "Join as a creator and see the products you have been asked to promote first.",
   },
   {
-    title: "Generate your link",
-    copy: "Get a tracked URL with QR code and share-ready caption made for your audience.",
+    title: "Generate your own link",
+    copy: "Copy a unique checkout link that proves which buyers came from your audience.",
   },
   {
-    title: "Earn on every sale",
-    copy: "Watch clicks turn into held and released earnings — all from one clean dashboard.",
+    title: "See the same truth",
+    copy: "Clicks, conversions, and commissions show in your dashboard so the merchant is not the only source of truth.",
   },
 ];
 
@@ -77,7 +77,7 @@ export default function HowItWorks() {
           className="m-0 mb-3 text-[14px] font-semibold tracking-[-0.18px]"
           style={{ color: "var(--accent)", fontFamily: "var(--font-inter, sans-serif)" }}
         >
-          Two journeys, zero collisions
+          Built for trust, not reach promises
         </p>
         <h2
           className="m-0 text-midnight leading-[1.04] tracking-[-0.038em] font-semibold"
@@ -86,21 +86,21 @@ export default function HowItWorks() {
             fontFamily: "var(--font-inter, sans-serif)",
           }}
         >
-          One page does one job.
+          Three steps from content to confirmed sale.
         </h2>
         <p
           className="max-w-[590px] mx-auto mt-4 text-[17px] leading-[1.5] tracking-[-0.22px] text-graphite"
           style={{ fontFamily: "var(--font-inter, sans-serif)" }}
         >
-          A merchant thinks in products. An affiliate thinks in links. SplitLink
-          keeps both mental models in their own lane.
+          Independent merchants should not pay for creator reach and hope it
+          turns into customers. Creators should not chase merchants for
+          commission proof. SplitLink gives both sides the same record.
         </p>
       </div>
 
       {/* Journey cards */}
       <div
-        className="grid gap-4"
-        style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
+        className="grid gap-4 grid-cols-1 lg:grid-cols-2"
       >
         {/* Merchant card */}
         <article
@@ -119,7 +119,7 @@ export default function HowItWorks() {
               className="text-[17px] text-charcoal font-semibold"
               style={{ fontFamily: "var(--font-inter, sans-serif)" }}
             >
-              Products → Revenue
+              Product to proof
             </strong>
           </div>
           {MERCHANT_STEPS.map((step, i) => (
@@ -148,7 +148,7 @@ export default function HowItWorks() {
               className="text-[17px] text-charcoal font-semibold"
               style={{ fontFamily: "var(--font-inter, sans-serif)" }}
             >
-              Links → Commission
+              Link to commission
             </strong>
           </div>
           {AFFILIATE_STEPS.map((step, i) => (

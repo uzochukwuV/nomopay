@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 
@@ -36,26 +36,82 @@ function MerchantOverview() {
     totalRevenue: number;
     totalMerchantPayout: number;
     totalCommissionsPaid: number;
+    currentRevenue: number;
+    previousRevenue: number;
+    revenueDeltaPct: number | null;
+    activeProducts: number;
+    pausedProducts: number;
+    activeAffiliateLinks: number;
     transactionCount: number;
-    products: { id: string; _count: { affiliateLinks: number } }[];
+    products: { id: string; title: string; status: string; _count: { affiliateLinks: number; transactions: number } }[];
+    recentSales: {
+      id: string;
+      grossAmount: number;
+      merchantPayout: number;
+      currency: string;
+      createdAt: string;
+      product: { title: string };
+      affiliate?: { name: string } | null;
+      affiliateLink?: { refCode: string } | null;
+    }[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const refreshStats = useCallback(async () => {
+    const token = await getToken();
+    if (!token) return;
+    const res = await fetch("/api/analytics/merchant", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    setStats(data);
+    setLoading(false);
+  }, [getToken]);
+
   useEffect(() => {
-    async function load() {
+    let cancelled = false;
+    async function loadInitial() {
       const token = await getToken();
-      if (!token) return;
+      if (!token || cancelled) return;
       const res = await fetch("/api/analytics/merchant", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
+      if (cancelled) return;
       setStats(data);
       setLoading(false);
     }
-    load();
+    void loadInitial();
+    return () => {
+      cancelled = true;
+    };
   }, [getToken]);
 
-  const activeAffiliates = stats?.products.reduce((s, p) => s + p._count.affiliateLinks, 0) ?? 0;
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval>;
+    let source: EventSource | null = null;
+    async function connect() {
+      const token = await getToken();
+      if (!token) return;
+      source = new EventSource(`/api/events?token=${encodeURIComponent(token)}`);
+      source.addEventListener("transaction.created", refreshStats);
+      source.addEventListener("transaction.refunded", refreshStats);
+      source.addEventListener("transaction.shipped", refreshStats);
+      source.addEventListener("product.updated", refreshStats);
+      source.onerror = () => {
+        source?.close();
+        timer = setInterval(refreshStats, 60000);
+      };
+    }
+    connect();
+    return () => {
+      source?.close();
+      if (timer) clearInterval(timer);
+    };
+  }, [getToken, refreshStats]);
+
+  const activeAffiliates = stats?.activeAffiliateLinks ?? 0;
+  const delta = stats?.revenueDeltaPct;
 
   return (
     <div>
@@ -86,6 +142,53 @@ function MerchantOverview() {
             <StatCard label="Commissions paid" value={formatCents(stats?.totalCommissionsPaid ?? 0)} sub="To affiliates" />
             <StatCard label="Active affiliates" value={String(activeAffiliates)} sub="Promoting your products" />
           </div>
+          <div className="grid lg:grid-cols-[1fr_1fr] gap-4 mb-8">
+            <div className="rounded-2xl p-5" style={{ background: "var(--card)", boxShadow: "var(--shadow-card)" }}>
+              <h2 className="font-bold mb-4" style={{ color: "var(--midnight)" }}>Last 30 days</h2>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <div className="text-3xl font-bold" style={{ color: "var(--midnight)" }}>{formatCents(stats?.currentRevenue ?? 0)}</div>
+                  <div className="text-xs mt-1" style={{ color: "var(--ash)" }}>Previous: {formatCents(stats?.previousRevenue ?? 0)}</div>
+                </div>
+                <span className="text-sm font-bold" style={{ color: delta == null || delta >= 0 ? "var(--earn)" : "#8a2020" }}>
+                  {delta == null ? "New" : `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%`}
+                </span>
+              </div>
+            </div>
+            <div className="rounded-2xl p-5" style={{ background: "var(--card)", boxShadow: "var(--shadow-card)" }}>
+              <h2 className="font-bold mb-4" style={{ color: "var(--midnight)" }}>Catalog health</h2>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <StatCard label="Active" value={String(stats?.activeProducts ?? 0)} sub="Products" />
+                <StatCard label="Paused" value={String(stats?.pausedProducts ?? 0)} sub="Products" />
+                <StatCard label="Sales" value={String(stats?.transactionCount ?? 0)} sub="Orders" />
+              </div>
+            </div>
+          </div>
+
+          {(stats?.recentSales?.length ?? 0) > 0 && (
+            <div className="rounded-2xl p-5 mb-8" style={{ background: "var(--card)", boxShadow: "var(--shadow-card)" }}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold" style={{ color: "var(--midnight)" }}>Recent sales</h2>
+                <Link href="/dashboard/transactions" className="text-sm font-bold" style={{ color: "var(--accent)" }}>View all</Link>
+              </div>
+              <div className="space-y-3">
+                {stats?.recentSales.map((sale) => (
+                  <div key={sale.id} className="flex items-center justify-between gap-4 rounded-xl p-3" style={{ background: "var(--stone)" }}>
+                    <div>
+                      <div className="text-sm font-bold" style={{ color: "var(--midnight)" }}>{sale.product.title}</div>
+                      <div className="text-xs" style={{ color: "var(--ash)" }}>
+                        {sale.affiliate ? `Affiliate: ${sale.affiliate.name}` : "Direct sale"} {sale.affiliateLink ? `· ${sale.affiliateLink.refCode}` : ""}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold">{formatCents(sale.grossAmount)}</div>
+                      <div className="text-xs" style={{ color: "var(--earn)" }}>Payout {formatCents(sale.merchantPayout)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {(stats?.products.length ?? 0) === 0 && (
             <div

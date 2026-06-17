@@ -4,8 +4,16 @@ import { prisma } from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import type { AuthenticatedRequest } from '../middleware/auth.js';
 import crypto from 'crypto';
+import { z } from 'zod';
+import { publishDashboardEvent } from '../lib/events.js';
+import { sendBuyerTrackingEmail } from '../lib/email.js';
 
 const router = Router();
+
+const FulfillmentSchema = z.object({
+  trackingUrl: z.string().url(),
+  merchantNote: z.string().max(1000).optional(),
+});
 
 function normalizeReferrer(raw: string | undefined): string {
   if (!raw) return 'direct';
@@ -70,17 +78,25 @@ router.post('/click', async (req: Request, res: Response): Promise<void> => {
   res.json({ recorded: !duplicate });
 });
 
-// GET /api/analytics/merchant — merchant dashboard stats
-router.get('/merchant', requireAuth, async (req: Request, res: Response): Promise<void> => {
+async function merchantOverview(req: Request, res: Response): Promise<void> {
   const user = (req as AuthenticatedRequest).user!;
+  const now = new Date();
+  const currentStart = new Date(now);
+  currentStart.setUTCDate(currentStart.getUTCDate() - 30);
+  const previousStart = new Date(now);
+  previousStart.setUTCDate(previousStart.getUTCDate() - 60);
 
-  const [products, transactions] = await Promise.all([
+  const [products, transactions, recentSales] = await Promise.all([
     prisma.product.findMany({
       where: { merchantId: user.id },
       select: {
         id: true,
         title: true,
         status: true,
+        price: true,
+        currency: true,
+        commissionRate: true,
+        slug: true,
         _count: { select: { affiliateLinks: true, transactions: true } },
       },
     }),
@@ -95,12 +111,31 @@ router.get('/merchant', requireAuth, async (req: Request, res: Response): Promis
         createdAt: true,
       },
     }),
+    prisma.transaction.findMany({
+      where: { merchantId: user.id },
+      include: {
+        product: { select: { title: true, slug: true } },
+        affiliate: { select: { name: true, slug: true } },
+        affiliateLink: { select: { refCode: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+    }),
   ]);
 
   const totalRevenue = transactions.reduce((s, t) => s + t.grossAmount, 0);
   const totalMerchantPayout = transactions.reduce((s, t) => s + t.merchantPayout, 0);
   const totalCommissionsPaid = transactions.reduce((s, t) => s + t.affiliateCommission, 0);
   const totalPlatformFees = transactions.reduce((s, t) => s + t.platformFee, 0);
+  const currentTransactions = transactions.filter((t) => t.createdAt >= currentStart);
+  const previousTransactions = transactions.filter((t) => t.createdAt >= previousStart && t.createdAt < currentStart);
+  const currentRevenue = currentTransactions.reduce((s, t) => s + t.grossAmount, 0);
+  const previousRevenue = previousTransactions.reduce((s, t) => s + t.grossAmount, 0);
+  const currentPayout = currentTransactions.reduce((s, t) => s + t.merchantPayout, 0);
+  const previousPayout = previousTransactions.reduce((s, t) => s + t.merchantPayout, 0);
+  const activeProducts = products.filter((p) => p.status === 'active').length;
+  const pausedProducts = products.filter((p) => p.status === 'paused').length;
+  const activeAffiliateLinks = products.reduce((s, p) => s + p._count.affiliateLinks, 0);
 
   res.json({
     products,
@@ -109,6 +144,89 @@ router.get('/merchant', requireAuth, async (req: Request, res: Response): Promis
     totalCommissionsPaid,
     totalPlatformFees,
     transactionCount: transactions.length,
+    activeProducts,
+    pausedProducts,
+    activeAffiliateLinks,
+    currentRevenue,
+    previousRevenue,
+    currentPayout,
+    previousPayout,
+    revenueDeltaPct: previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : null,
+    payoutDeltaPct: previousPayout > 0 ? ((currentPayout - previousPayout) / previousPayout) * 100 : null,
+    recentSales,
+  });
+}
+
+// GET /api/analytics/merchant — merchant dashboard stats
+router.get('/merchant', requireAuth, merchantOverview);
+
+router.get('/merchant/overview', requireAuth, merchantOverview);
+
+router.get('/merchant/products', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const user = (req as AuthenticatedRequest).user!;
+  const products = await prisma.product.findMany({
+    where: { merchantId: user.id },
+    include: {
+      affiliateLinks: { select: { id: true, clicks: { select: { id: true } } } },
+      transactions: { select: { id: true, grossAmount: true, affiliateCommission: true, status: true } },
+      _count: { select: { affiliateLinks: true, transactions: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  res.json({
+    products: products.map((product) => {
+      const paidTransactions = product.transactions.filter((t) => t.status === 'paid');
+      const clicks = product.affiliateLinks.reduce((s, link) => s + link.clicks.length, 0);
+      const conversions = paidTransactions.length;
+      return {
+        id: product.id,
+        title: product.title,
+        slug: product.slug,
+        status: product.status,
+        price: product.price,
+        currency: product.currency,
+        commissionRate: product.commissionRate,
+        affiliateLinks: product._count.affiliateLinks,
+        clicks,
+        conversions,
+        revenue: paidTransactions.reduce((s, t) => s + t.grossAmount, 0),
+        commissionsPaid: paidTransactions.reduce((s, t) => s + t.affiliateCommission, 0),
+        conversionRate: clicks > 0 ? (conversions / clicks) * 100 : 0,
+      };
+    }),
+  });
+});
+
+router.get('/merchant/affiliates', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const user = (req as AuthenticatedRequest).user!;
+  const links = await prisma.affiliateLink.findMany({
+    where: { product: { merchantId: user.id } },
+    include: {
+      affiliate: { select: { id: true, name: true, slug: true, email: true } },
+      product: { select: { title: true, slug: true } },
+      clicks: { select: { id: true } },
+      transactions: { select: { id: true, grossAmount: true, affiliateCommission: true, status: true } },
+    },
+  });
+
+  res.json({
+    affiliates: links.map((link) => {
+      const paidTransactions = link.transactions.filter((t) => t.status === 'paid');
+      const clicks = link.clicks.length;
+      const conversions = paidTransactions.length;
+      return {
+        linkId: link.id,
+        refCode: link.refCode,
+        affiliate: link.affiliate,
+        product: link.product,
+        clicks,
+        conversions,
+        revenue: paidTransactions.reduce((s, t) => s + t.grossAmount, 0),
+        commission: paidTransactions.reduce((s, t) => s + t.affiliateCommission, 0),
+        conversionRate: clicks > 0 ? (conversions / clicks) * 100 : 0,
+      };
+    }),
   });
 });
 
@@ -154,7 +272,11 @@ router.get('/transactions', requireAuth, async (req: Request, res: Response): Pr
   const isMerchantView = role !== 'affiliate';
 
   const transactions = await prisma.transaction.findMany({
-    where: isMerchantView ? { merchantId: user.id } : { affiliateId: user.id },
+    where: {
+      ...(isMerchantView ? { merchantId: user.id } : { affiliateId: user.id }),
+      ...(req.query.status && typeof req.query.status === 'string' ? { status: req.query.status as any } : {}),
+      ...(req.query.productId && typeof req.query.productId === 'string' ? { productId: req.query.productId } : {}),
+    },
     include: {
       product: { select: { title: true, slug: true } },
       affiliateLink: { select: { refCode: true, customLabel: true } },
@@ -168,6 +290,50 @@ router.get('/transactions', requireAuth, async (req: Request, res: Response): Pr
     transactions,
     nextCursor: transactions.length === pageSize ? transactions.at(-1)?.id : null,
   });
+});
+
+router.patch('/transactions/:id/fulfillment', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const user = (req as AuthenticatedRequest).user!;
+  const parsed = FulfillmentSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+
+  const transaction = await prisma.transaction.findUnique({
+    where: { id: String(req.params.id) },
+    include: {
+      product: { select: { title: true } },
+      merchant: { select: { name: true } },
+    },
+  });
+  if (!transaction || transaction.merchantId !== user.id) {
+    res.status(404).json({ error: 'Transaction not found' });
+    return;
+  }
+
+  const updated = await prisma.transaction.update({
+    where: { id: transaction.id },
+    data: {
+      fulfillmentStatus: 'shipped',
+      trackingUrl: parsed.data.trackingUrl,
+      merchantNote: parsed.data.merchantNote ?? null,
+      shippedAt: new Date(),
+    },
+    include: { product: { select: { title: true } } },
+  });
+
+  if (transaction.buyerEmail) {
+    sendBuyerTrackingEmail({
+      buyerEmail: transaction.buyerEmail,
+      productTitle: transaction.product.title,
+      merchantName: transaction.merchant.name,
+      trackingUrl: parsed.data.trackingUrl,
+      note: parsed.data.merchantNote,
+    }).catch((err) => console.error('[fulfillment] buyer tracking email failed:', err));
+  }
+  publishDashboardEvent({ type: 'transaction.shipped', merchantId: user.id, transactionId: transaction.id });
+  res.json({ transaction: updated });
 });
 
 // GET /api/analytics/link-breakdown/:linkId — per-link click breakdown (heatmap + referrer)

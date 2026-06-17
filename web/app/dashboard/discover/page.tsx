@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 
 interface Product {
@@ -47,7 +47,6 @@ function GenerateLinkModal({
   token: string;
 }) {
   const [link, setLink] = useState<string | null>(null);
-  const [refCode, setRefCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [captionPlatform, setCaptionPlatform] = useState<"instagram" | "whatsapp">("instagram");
@@ -65,7 +64,6 @@ function GenerateLinkModal({
       const data = await res.json();
       if (data.url) {
         setLink(data.url);
-        setRefCode(data.link?.refCode ?? null);
       }
       setLoading(false);
     }
@@ -288,31 +286,32 @@ export default function DiscoverPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [search, setSearch] = useState("");
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const t = await getToken();
-      if (!t) return;
-      setToken(t);
-      const res = await fetch("/api/products?view=marketplace&limit=50", {
-        headers: { Authorization: `Bearer ${t}` },
-      });
-      const data = await res.json();
-      // Sort by commission dollar amount descending
-      const sorted = (data.products ?? []).sort(
-        (a: Product, b: Product) =>
-          commissionDollars(b.price, b.commissionRate) -
-          commissionDollars(a.price, a.commissionRate)
-      );
-      setProducts(sorted);
-    } finally {
-      setLoading(false);
-    }
-  }, [getToken]);
-
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    let cancelled = false;
+    async function fetchProducts() {
+      try {
+        const t = await getToken();
+        if (!t || cancelled) return;
+        setToken(t);
+        const res = await fetch("/api/products?view=marketplace&limit=50", {
+          headers: { Authorization: `Bearer ${t}` },
+        });
+        const data = await res.json();
+        const sorted = (data.products ?? []).sort(
+          (a: Product, b: Product) =>
+            commissionDollars(b.price, b.commissionRate) -
+            commissionDollars(a.price, a.commissionRate)
+        );
+        if (!cancelled) setProducts(sorted);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void fetchProducts();
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken]);
 
   const filtered = products.filter(
     (p) =>

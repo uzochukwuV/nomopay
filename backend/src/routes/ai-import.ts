@@ -10,10 +10,24 @@ import type { AuthenticatedRequest } from '../middleware/auth.js';
 import { slugify } from '../lib/utils.js';
 
 const router = Router();
-const ai = new OpenAI({
-  apiKey: process.env.AI_API_KEY,
-  baseURL: 'https://apekey.ai/v1',
-});
+
+function getAiClient() {
+  const apiKey =
+    process.env.AI_API_KEY ??
+    process.env.APEKEY ??
+    process.env.APEKEY_API_KEY ??
+    process.env.OPENAI_API_KEY ??
+    process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('AI import is not configured. Set AI_API_KEY, APEKEY_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY.');
+  }
+
+  return new OpenAI({
+    apiKey,
+    baseURL: process.env.AI_BASE_URL ?? 'https://apekey.ai/v1',
+  });
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -90,7 +104,7 @@ function parseClaudeJson(text: string): unknown[] {
 }
 
 async function extractWithClaude(content: string, hint: string) {
-  const completion = await ai.chat.completions.create({
+  const completion = await getAiClient().chat.completions.create({
     model: 'auto',
     max_tokens: 4096,
     messages: [

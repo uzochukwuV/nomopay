@@ -1,2 +1,1 @@
-# nomopay
-Slit that pay
+Small merchants already work with creators on WhatsApp, Instagram, TikTok, and local communities, but commission tracking is manual, trust-based, and messy. SplitLink gives them marketplace-style affiliate infrastructure without needing Shopify, TikTok Shop, or eBay.

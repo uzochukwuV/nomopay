@@ -38,13 +38,19 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  const hasValidClerkKey =
+    Boolean(publishableKey) &&
+    (publishableKey!.startsWith("pk_test_") || publishableKey!.startsWith("pk_live_")) &&
+    !publishableKey!.includes("placeholder");
+
   return (
     <html
       lang="en"
       className={`${jakarta.variable} ${fraunces.variable} ${inter.variable}`}
     >
       <body className="min-h-full antialiased bg-canvas text-charcoal">
-        <ClerkProvider>{children}</ClerkProvider>
+        {hasValidClerkKey ? <ClerkProvider>{children}</ClerkProvider> : children}
       </body>
     </html>
   );
