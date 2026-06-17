@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSafeAuth } from "@/app/lib/use-safe-clerk";
+import { readApiResponse } from "@/app/lib/http";
 import Link from "next/link";
 
 export default function NotificationsPage() {
@@ -27,7 +28,9 @@ export default function NotificationsPage() {
         body: JSON.stringify({ phone: phone.trim() }),
       });
       if (!res.ok) {
-        const d = await res.json();
+        const d = await readApiResponse<{ error?: string }>(res).catch((err) => ({
+          error: err instanceof Error ? err.message : "Failed to save",
+        }));
         setError(d.error ?? "Failed to save");
         return;
       }

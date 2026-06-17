@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useEffect } from "react";
 import { useSafeAuth } from "@/app/lib/use-safe-clerk";
+import { readApiResponse } from "@/app/lib/http";
 import Link from "next/link";
 
 function formatCents(cents: number) {
@@ -56,16 +57,23 @@ function MerchantOverview() {
     }[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const refreshStats = useCallback(async () => {
     const token = await getToken();
     if (!token) return;
-    const res = await fetch("/api/analytics/merchant", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    setStats(data);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/analytics/merchant", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await readApiResponse<typeof stats>(res);
+      setStats(data);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load dashboard.");
+    } finally {
+      setLoading(false);
+    }
   }, [getToken]);
 
   useEffect(() => {
@@ -73,12 +81,19 @@ function MerchantOverview() {
     async function loadInitial() {
       const token = await getToken();
       if (!token || cancelled) return;
-      const res = await fetch("/api/analytics/merchant", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      try {
+        const res = await fetch("/api/analytics/merchant", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await readApiResponse<typeof stats>(res);
+        if (cancelled) return;
+        setStats(data);
+        setError("");
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Unable to load dashboard.");
+      }
       if (cancelled) return;
-      setStats(data);
       setLoading(false);
     }
     void loadInitial();
@@ -134,6 +149,10 @@ function MerchantOverview() {
 
       {loading ? (
         <div className="flex justify-center py-12" style={{ color: "var(--ash)" }}><Spinner /></div>
+      ) : error ? (
+        <div className="rounded-2xl p-6 text-sm font-bold" style={{ background: "#fff0f0", color: "#8a2020" }}>
+          {error}
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -244,18 +263,25 @@ function AffiliateOverview() {
   } | null>(null);
   const [user, setUser] = useState<{ stripeOnboardingComplete: boolean; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
       const token = await getToken();
       if (!token) return;
-      const [statsRes, meRes] = await Promise.all([
-        fetch("/api/analytics/affiliate", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/users/me", { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-      setStats(await statsRes.json());
-      setUser(await meRes.json());
-      setLoading(false);
+      try {
+        const [statsRes, meRes] = await Promise.all([
+          fetch("/api/analytics/affiliate", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("/api/users/me", { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        setStats(await readApiResponse<typeof stats>(statsRes));
+        setUser(await readApiResponse<{ stripeOnboardingComplete: boolean; name: string }>(meRes));
+        setError("");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to load dashboard.");
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, [getToken]);
@@ -304,6 +330,10 @@ function AffiliateOverview() {
 
       {loading ? (
         <div className="flex justify-center py-12" style={{ color: "var(--ash)" }}><Spinner /></div>
+      ) : error ? (
+        <div className="rounded-2xl p-6 text-sm font-bold" style={{ background: "#fff0f0", color: "#8a2020" }}>
+          {error}
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -382,11 +412,15 @@ export default function DashboardPage() {
     async function loadRole() {
       const token = await getToken();
       if (!token) return;
-      const res = await fetch("/api/users/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setRole(data.role ?? "merchant");
+      try {
+        const res = await fetch("/api/users/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await readApiResponse<{ role?: string }>(res);
+        setRole(data.role ?? "merchant");
+      } catch {
+        setRole("merchant");
+      }
     }
     loadRole();
   }, [getToken]);

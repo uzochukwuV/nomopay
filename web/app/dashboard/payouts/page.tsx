@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSafeAuth } from "@/app/lib/use-safe-clerk";
+import { readApiResponse } from "@/app/lib/http";
 import Link from "next/link";
 
 interface Transaction {
@@ -70,6 +71,7 @@ export default function PayoutsPage() {
   const { getToken } = useSafeAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [stripeReady, setStripeReady] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -77,21 +79,26 @@ export default function PayoutsPage() {
       const token = await getToken();
       if (!token) return;
 
-      const [txRes, meRes] = await Promise.all([
-        fetch("/api/analytics/transactions?role=affiliate&limit=50", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("/api/users/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+      try {
+        const [txRes, meRes] = await Promise.all([
+          fetch("/api/analytics/transactions?role=affiliate&limit=50", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch("/api/users/me", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-      const txData = await txRes.json();
-      const meData = await meRes.json();
+        const txData = await readApiResponse<{ transactions?: Transaction[] }>(txRes);
+        const meData = await readApiResponse<{ stripeOnboardingComplete?: boolean }>(meRes);
 
-      setTransactions(txData.transactions ?? []);
-      setStripeReady(meData.stripeOnboardingComplete ?? false);
-      setLoading(false);
+        setTransactions(txData.transactions ?? []);
+        setStripeReady(meData.stripeOnboardingComplete ?? false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to load payouts.");
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, [getToken]);
@@ -160,6 +167,10 @@ export default function PayoutsPage() {
       {loading ? (
         <div className="flex justify-center py-20" style={{ color: "var(--ash)" }}>
           <Spinner />
+        </div>
+      ) : error ? (
+        <div className="rounded-2xl p-6 text-sm font-bold" style={{ background: "#fff0f0", color: "#8a2020" }}>
+          {error}
         </div>
       ) : transactions.length === 0 ? (
         <div
