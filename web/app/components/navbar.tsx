@@ -50,9 +50,9 @@ export default function Navbar() {
         {/* Nav links */}
         <nav className="hidden sm:flex items-center gap-1 px-1" aria-label="Primary">
           {[
-            ["#how-it-works", "How it works"],
-            ["#fee", "2% fee"],
-            ["#preview", "Preview"],
+            ["#how-it-works", "Trust flow"],
+            ["#fee", "Pricing"],
+            ["#preview", "Buyer page"],
           ].map(([href, label]) => (
             <Link
               key={href}
@@ -70,7 +70,7 @@ export default function Navbar() {
           className="flex items-center gap-2 min-h-[44px] px-4 rounded-full text-[13px] font-semibold text-white transition-transform hover:-translate-y-0.5"
           style={{ background: "var(--midnight)" }}
         >
-          Start selling
+          Start setup
           <ArrowIcon />
         </Link>
       </div>

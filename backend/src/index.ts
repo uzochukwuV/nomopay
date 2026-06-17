@@ -17,6 +17,7 @@ import analyticsRouter from './routes/analytics.js';
 import uploadsRouter from './routes/uploads.js';
 import aiImportRouter from './routes/ai-import.js';
 import invitesRouter from './routes/invites.js';
+import eventsRouter from './routes/events.js';
 
 const app = express();
 const PORT = process.env.PORT ?? 8080;
@@ -52,6 +53,7 @@ app.use('/api/affiliate-links', requireAuth, affiliateLinksRouter);
 app.use('/api/analytics', analyticsRouter); // mixed public (click) + protected
 app.use('/api/ai-import', requireAuth, aiImportRouter);
 app.use('/api/invites', requireAuth, invitesRouter);
+app.use('/api/events', eventsRouter);
 
 // 404 + error handler — must be last
 app.use(notFound);

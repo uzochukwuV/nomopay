@@ -1,8 +1,8 @@
 const FEE_ROWS = [
   { label: "Buyer pays", value: "$100.00", variant: "default" as const },
-  { label: "Affiliate earns", value: "$20.00", variant: "accent" as const },
+  { label: "Creator commission", value: "$15.00", variant: "accent" as const },
   { label: "SplitLink fee", value: "$2.00", variant: "default" as const },
-  { label: "Merchant receives", value: "$78.00", variant: "total" as const },
+  { label: "Merchant receives", value: "$83.00", variant: "total" as const },
 ];
 
 export default function PricingSection() {
@@ -25,21 +25,21 @@ export default function PricingSection() {
           className="m-0 mb-3 text-[14px] font-semibold tracking-[-0.18px]"
           style={{ color: "var(--accent)" }}
         >
-          Transparent by default
+          The model is simple
         </p>
         <h2
           className="m-0 text-midnight leading-[1.04] tracking-[-0.038em] font-semibold"
           style={{ fontSize: "clamp(40px, 5.4vw, 68px)" }}
         >
+          No upfront creator spend.
+          <br />
           We take{" "}
           <span style={{ color: "var(--accent)" }}>2%.</span>
-          <br />
-          That&apos;s it.
         </h2>
         <p className="max-w-[590px] mt-4 text-[17px] leading-[1.5] tracking-[-0.22px] text-graphite">
-          The math appears before signup, inside product cards, and inside
-          transactions — no hidden affiliate tax or surprise platform cut.
-          Gumroad takes 10%. Lemon Squeezy takes 5%. We take 2%.
+          Creators earn from real customer payments, not promises. Merchants
+          see the commission before the link goes live and the final split
+          after each checkout.
         </p>
       </div>
 
@@ -53,7 +53,7 @@ export default function PricingSection() {
         }}
       >
         <div className="px-4 py-4 pb-5 text-white font-bold text-[15px]">
-          Ceramic Ritual Set
+          Handmade Leather Tote
         </div>
         <div className="grid gap-1.5">
           {FEE_ROWS.map((row) => (

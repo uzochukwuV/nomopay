@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { Suspense, useState, useRef, useCallback } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -330,7 +330,7 @@ function ProductCard({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function AiImportPage() {
+function AiImportContent() {
   const { getToken } = useAuth();
   const { user } = useUser();
   const searchParams = useSearchParams();
@@ -555,7 +555,7 @@ export default function AiImportPage() {
           </div>
           <div>
             <p className="text-sm font-medium text-blue-800">Step 3 of 6 — Import your catalog</p>
-            <p className="text-xs text-blue-600">Stripe is connected. Now let's add your products so affiliates can start promoting.</p>
+            <p className="text-xs text-blue-600">Stripe is connected. Now let&apos;s add your products so affiliates can start promoting.</p>
           </div>
         </div>
       )}
@@ -892,21 +892,21 @@ export default function AiImportPage() {
               <div>
                 <h3 className="text-sm font-semibold text-gray-900">Invite a creator</h3>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Send a personal invite to someone in your network. They'll get a link to sign up as an affiliate and start earning.
+                  Send a personal invite to someone in your network. They&apos;ll get a link to sign up as an affiliate and start earning.
                 </p>
               </div>
             </div>
 
             {inviteSent && (
               <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-sm text-green-700 mb-4">
-                Invite sent! They'll receive an email with your sign-up link.
+                Invite sent! They&apos;ll receive an email with your sign-up link.
               </div>
             )}
 
             <form onSubmit={handleInvite} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Creator's name</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Creator&apos;s name</label>
                   <input
                     type="text"
                     value={inviteName}
@@ -950,5 +950,13 @@ export default function AiImportPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AiImportPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-sm text-gray-500">Loading...</div>}>
+      <AiImportContent />
+    </Suspense>
   );
 }

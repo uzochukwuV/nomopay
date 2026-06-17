@@ -27,7 +27,7 @@ router.post('/send', async (req: Request, res: Response): Promise<void> => {
   }
 
   const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
-  const signUpUrl = `${frontendUrl}/sign-up?role=affiliate&invitedBy=${encodeURIComponent(user.slug)}&inviterName=${encodeURIComponent(user.name)}`;
+  const signUpUrl = `${frontendUrl}/sign-up?role=affiliate&inviterSlug=${encodeURIComponent(user.slug)}&inviterName=${encodeURIComponent(user.name)}`;
 
   await sendInviteEmail({
     toEmail: parsed.data.email,

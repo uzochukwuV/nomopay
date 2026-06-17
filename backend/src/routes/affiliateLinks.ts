@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { customAlphabet } from 'nanoid';
 import type { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
-import { requireAuth, requireOnboarding } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js';
 import type { AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
@@ -103,7 +103,6 @@ router.get('/:id', requireAuth, async (req: Request, res: Response): Promise<voi
 router.post(
   '/',
   requireAuth,
-  requireOnboarding,
   async (req: Request, res: Response): Promise<void> => {
     const user = (req as AuthenticatedRequest).user!;
 

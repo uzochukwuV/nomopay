@@ -26,13 +26,39 @@ export default function BuyButton({ productId, price, currency, productSlug }: B
   // Track click when component mounts with a refCode
   useEffect(() => {
     if (!refCode) return;
+    const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
+    const attribution = JSON.stringify({ refCode, productId, productSlug, expiresAt });
+    localStorage.setItem("splitlink_attribution", attribution);
+    document.cookie = `splitlink_ref=${encodeURIComponent(refCode)}; Max-Age=${30 * 24 * 60 * 60}; Path=/; SameSite=Lax`;
     const referrer = document.referrer || undefined;
     fetch("/api/analytics/click", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refCode, referrer }),
     }).catch(() => {});
-  }, [refCode]);
+  }, [refCode, productId, productSlug]);
+
+  function getStoredRefCode() {
+    if (refCode) return refCode;
+    try {
+      const raw = localStorage.getItem("splitlink_attribution");
+      if (!raw) return undefined;
+      const stored = JSON.parse(raw) as {
+        refCode?: string;
+        productId?: string;
+        productSlug?: string;
+        expiresAt?: number;
+      };
+      if (!stored.refCode || !stored.expiresAt || stored.expiresAt < Date.now()) {
+        localStorage.removeItem("splitlink_attribution");
+        return undefined;
+      }
+      if (stored.productId !== productId && stored.productSlug !== productSlug) return undefined;
+      return stored.refCode;
+    } catch {
+      return undefined;
+    }
+  }
 
   async function handleBuy() {
     setLoading(true);
@@ -41,7 +67,7 @@ export default function BuyButton({ productId, price, currency, productSlug }: B
       const res = await fetch("/api/checkout/create-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, refCode }),
+        body: JSON.stringify({ productId, refCode: getStoredRefCode() }),
       });
       const data = await res.json();
       if (!res.ok) {

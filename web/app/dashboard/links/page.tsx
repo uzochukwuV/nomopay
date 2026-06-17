@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 
 interface AffiliateLink {
@@ -241,25 +241,27 @@ export default function LinksPage() {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState("");
 
-  const fetchLinks = useCallback(async () => {
-    setLoading(true);
-    try {
-      const t = await getToken();
-      if (!t) return;
-      setToken(t);
-      const res = await fetch("/api/affiliate-links", {
-        headers: { Authorization: `Bearer ${t}` },
-      });
-      const data = await res.json();
-      setLinks(data.links ?? []);
-    } finally {
-      setLoading(false);
-    }
-  }, [getToken]);
-
   useEffect(() => {
-    fetchLinks();
-  }, [fetchLinks]);
+    let cancelled = false;
+    async function fetchLinks() {
+      try {
+        const t = await getToken();
+        if (!t || cancelled) return;
+        setToken(t);
+        const res = await fetch("/api/affiliate-links", {
+          headers: { Authorization: `Bearer ${t}` },
+        });
+        const data = await res.json();
+        if (!cancelled) setLinks(data.links ?? []);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void fetchLinks();
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken]);
 
   return (
     <div>

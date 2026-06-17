@@ -55,13 +55,8 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 });
 
 // GET /api/users/me — returns authenticated user's profile
-router.get('/me', async (req: Request, res: Response): Promise<void> => {
-  const authReq = req as AuthenticatedRequest;
-  if (!authReq.user) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
-  res.json({ user: authReq.user });
+router.get('/me', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  res.json((req as AuthenticatedRequest).user!);
 });
 
 const UpdateMeSchema = z.object({

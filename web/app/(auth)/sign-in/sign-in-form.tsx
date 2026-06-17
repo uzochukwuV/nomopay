@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useSignIn } from "@clerk/nextjs";
+import { useClerk, useSignIn } from "@clerk/nextjs";
 
 function ArrowIcon() {
   return (
@@ -24,7 +24,8 @@ function ArrowIcon() {
 
 export default function SignInForm() {
   const router = useRouter();
-  const { signIn, setActive } = useSignIn();
+  const { signIn } = useSignIn();
+  const { setActive } = useClerk();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -44,13 +45,13 @@ export default function SignInForm() {
     setIsLoading(true);
 
     try {
-      const result = await signIn.create({
+      const result = (await signIn.create({
         identifier: email,
         password,
-      });
+      })) as unknown as { status: string; createdSessionId?: string };
 
-      if (result.status === "complete") {
-        await setActive!({ session: result.createdSessionId });
+      if (result.status === "complete" && result.createdSessionId) {
+        await setActive({ session: result.createdSessionId });
         router.push("/dashboard");
       } else {
         setError("Sign-in could not be completed. Please try again.");

@@ -11,6 +11,8 @@ const router = Router();
 router.post('/onboard', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const user = (req as AuthenticatedRequest).user!;
   const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+  const isAffiliate = user.role === 'affiliate';
+  const returnPath = isAffiliate ? '/dashboard/discover?onboarding=true' : '/dashboard/ai-import?onboarding=true';
 
   let stripeAccountId = user.stripeAccountId;
 
@@ -43,7 +45,7 @@ router.post('/onboard', requireAuth, async (req: Request, res: Response): Promis
   const accountLink = await stripe.accountLinks.create({
     account: stripeAccountId,
     refresh_url: `${frontendUrl}/dashboard/settings?onboarding=refresh`,
-    return_url: `${frontendUrl}/dashboard/ai-import?onboarding=true`,
+    return_url: `${frontendUrl}${returnPath}`,
     type: 'account_onboarding',
   });
 

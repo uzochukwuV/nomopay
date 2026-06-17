@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireOnboarding } from '../middleware/auth.js';
 import type { AuthenticatedRequest } from '../middleware/auth.js';
 import { PLATFORM_FEE_RATE } from '../lib/stripe.js';
+import { publishDashboardEvent } from '../lib/events.js';
 
 const router = Router();
 
@@ -78,6 +79,21 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
   res.json({ products, nextCursor: products.length === pageSize ? products.at(-1)?.id : null });
 });
 
+// GET /api/products/by-slug/:slug — get product by slug (used on buyer-facing page)
+router.get('/by-slug/:slug', async (req: Request, res: Response): Promise<void> => {
+  const product = await prisma.product.findUnique({
+    where: { slug: String(req.params.slug) },
+    include: { merchant: { select: { name: true, slug: true } } },
+  });
+
+  if (!product || product.status !== 'active') {
+    res.status(404).json({ error: 'Product not found or unavailable' });
+    return;
+  }
+
+  res.json({ product });
+});
+
 // GET /api/products/:id — get single product (public details + fee breakdown)
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   const product = await prisma.product.findUnique({
@@ -93,21 +109,6 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   const feeBreakdown = computeFeeBreakdown(product.price, Number(product.commissionRate));
 
   res.json({ product, feeBreakdown });
-});
-
-// GET /api/products/by-slug/:slug — get product by slug (used on buyer-facing page)
-router.get('/by-slug/:slug', async (req: Request, res: Response): Promise<void> => {
-  const product = await prisma.product.findUnique({
-    where: { slug: String(req.params.slug) },
-    include: { merchant: { select: { name: true, slug: true } } },
-  });
-
-  if (!product || product.status !== 'active') {
-    res.status(404).json({ error: 'Product not found or unavailable' });
-    return;
-  }
-
-  res.json({ product });
 });
 
 // POST /api/products — create product
@@ -181,6 +182,7 @@ router.patch('/:id', requireAuth, async (req: Request, res: Response): Promise<v
     data: parsed.data,
   });
 
+  publishDashboardEvent({ type: 'product.updated', merchantId: user.id, productId: updated.id });
   res.json({ product: updated });
 });
 
@@ -203,6 +205,7 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response): Promise<
     data: { status: 'archived' },
   });
 
+  publishDashboardEvent({ type: 'product.updated', merchantId: user.id, productId: product.id });
   res.json({ message: 'Product archived' });
 });
 

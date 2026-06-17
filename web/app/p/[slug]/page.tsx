@@ -22,7 +22,8 @@ async function getProduct(slug: string): Promise<Product | null> {
       { cache: "no-store" }
     );
     if (!res.ok) return null;
-    return res.json();
+    const data = await res.json();
+    return data.product ?? null;
   } catch {
     return null;
   }

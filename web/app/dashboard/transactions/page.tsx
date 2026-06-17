@@ -11,7 +11,9 @@ interface Transaction {
   platformFee: number;
   currency: string;
   status: string;
+  fulfillmentStatus: string;
   buyerEmail: string | null;
+  trackingUrl: string | null;
   createdAt: string;
   product: { title: string; slug: string };
   affiliateLink: { refCode: string; customLabel: string | null } | null;
@@ -50,6 +52,7 @@ export default function TransactionsPage() {
   const { getToken } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tracking, setTracking] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function load() {
@@ -64,6 +67,21 @@ export default function TransactionsPage() {
     }
     load();
   }, [getToken]);
+
+  async function markShipped(tx: Transaction) {
+    const token = await getToken();
+    const trackingUrl = tracking[tx.id]?.trim();
+    if (!trackingUrl) return;
+    const res = await fetch(`/api/analytics/transactions/${tx.id}/fulfillment`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ trackingUrl }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setTransactions((items) => items.map((item) => (item.id === tx.id ? data.transaction : item)));
+    }
+  }
 
   const totalRevenue = transactions.filter((t) => t.status === "paid").reduce((s, t) => s + t.grossAmount, 0);
   const currency = transactions[0]?.currency ?? "usd";
@@ -99,7 +117,7 @@ export default function TransactionsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ background: "var(--stone)" }}>
-                {["Date", "Product", "Gross", "Your payout", "Commission", "Status"].map((h) => (
+                {["Date", "Product", "Gross", "Your payout", "Commission", "Status", "Fulfillment"].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-bold" style={{ color: "var(--ash)" }}>{h}</th>
                 ))}
               </tr>
@@ -117,6 +135,23 @@ export default function TransactionsPage() {
                     {t.affiliateLink ? `${formatCents(t.affiliateCommission, t.currency)} (ref: ${t.affiliateLink.refCode})` : "—"}
                   </td>
                   <td className="px-4 py-3">{statusBadge(t.status)}</td>
+                  <td className="px-4 py-3 min-w-[220px]">
+                    {t.fulfillmentStatus === "shipped" ? (
+                      <a className="text-xs font-bold underline" href={t.trackingUrl ?? "#"} target="_blank" rel="noreferrer" style={{ color: "var(--earn)" }}>
+                        Shipped
+                      </a>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input
+                          value={tracking[t.id] ?? ""}
+                          onChange={(e) => setTracking((v) => ({ ...v, [t.id]: e.target.value }))}
+                          placeholder="Tracking URL"
+                          className="w-32 rounded-lg border px-2 py-1 text-xs"
+                        />
+                        <button onClick={() => markShipped(t)} className="text-xs font-bold underline">Ship</button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

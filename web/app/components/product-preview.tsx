@@ -34,25 +34,24 @@ export default function ProductPreview() {
           className="m-0 mb-3 text-[14px] font-semibold tracking-[-0.18px]"
           style={{ color: "var(--accent)" }}
         >
-          The money page
+          Buyer checkout page
         </p>
         <h2
           className="m-0 text-midnight leading-[1.04] tracking-[-0.038em] font-semibold"
           style={{ fontSize: "clamp(40px, 5.4vw, 68px)" }}
         >
-          Shared links should feel delightful, not busy.
+          A creator link should lead straight to the sale.
         </h2>
         <p className="max-w-[590px] mx-auto mt-4 text-[17px] leading-[1.5] tracking-[-0.22px] text-graphite">
-          No navigation. No related products. No account prompt. Just a beautiful
-          product page and one strong checkout button.
+          Buyers do not need a marketplace account or a merchant dashboard.
+          They need the product, the price, the seller, and one secure way to pay.
         </p>
       </div>
 
       {/* Preview card */}
       <div
-        className="grid rounded-3xl overflow-hidden bg-card"
+        className="grid rounded-3xl overflow-hidden bg-card lg:grid-cols-[minmax(0,0.9fr)_minmax(320px,0.72fr)]"
         style={{
-          gridTemplateColumns: "minmax(0, 0.9fr) minmax(320px, 0.72fr)",
           boxShadow: "var(--shadow-card)",
         }}
       >
@@ -88,7 +87,7 @@ export default function ProductPreview() {
             className="absolute left-6 bottom-6 px-2.5 py-2 rounded-[10px] text-[12px] font-bold text-charcoal"
             style={{ background: "var(--parchment)", boxShadow: "var(--shadow-card)" }}
           >
-            Affiliate link preview
+            Creator checkout link
           </span>
         </div>
 
@@ -98,21 +97,21 @@ export default function ProductPreview() {
           style={{ fontFamily: "var(--font-inter, sans-serif)" }}
         >
           <span className="text-ash text-[13px] font-bold">
-            Maison Kiln · Verified Merchant
+            Ada Studio · Verified merchant
           </span>
           <h3
             className="mt-3 mb-3 text-midnight leading-[1] tracking-[-0.04em] font-semibold"
             style={{ fontSize: "clamp(36px, 4.6vw, 58px)" }}
           >
-            Ceramic Ritual Set
+            Handmade Leather Tote
           </h3>
           <p className="text-graphite text-[15px] leading-[1.47]">
-            A handcrafted trio for slower mornings, finished in warm matte clay
-            and packaged for gifting.
+            A structured everyday tote made in small batches for independent
+            boutiques and creator-led campaigns.
           </p>
           <div className="mt-5 mb-6 grid gap-1.5">
             <strong className="text-midnight text-[34px] font-bold tracking-[-0.05em]">
-              $84.00
+              $100.00
             </strong>
             <span className="text-ash text-[13px] font-semibold">
               Secure checkout powered by Stripe
@@ -123,11 +122,11 @@ export default function ProductPreview() {
             className="flex items-center justify-center gap-2 w-full min-h-[48px] rounded-full text-[14px] font-semibold text-white cursor-default"
             style={{ background: "var(--midnight)" }}
           >
-            Buy Now — $84.00
+            Buy Now — $100.00
             <ArrowIcon />
           </button>
           <p className="mt-4 text-[12px] text-ash text-center font-semibold">
-            Stripe-secured · 7-day returns · Powered by SplitLink
+            Stripe-secured · Sold by Ada Studio · Powered by SplitLink
           </p>
         </div>
       </div>

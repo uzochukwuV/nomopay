@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useSignUp } from "@clerk/nextjs";
+import { useClerk, useSignUp } from "@clerk/nextjs";
 
 type Role = "merchant" | "affiliate" | "both";
 
@@ -51,7 +51,8 @@ export default function SignUpForm({
   inviterName?: string;
 }) {
   const router = useRouter();
-  const { signUp, setActive } = useSignUp();
+  const { signUp } = useSignUp();
+  const { setActive } = useClerk();
   const [role, setRole] = useState<Role>(initialRole);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -105,15 +106,15 @@ export default function SignUpForm({
 
     try {
       // Create Clerk account
-      const result = await signUp.create({
+      const result = (await signUp.create({
         emailAddress: email,
         password,
         firstName: name,
-      });
+      })) as unknown as { status: string; createdSessionId?: string; createdUserId?: string };
 
       // Activate the session immediately (test keys skip email verification)
-      if (result.status === "complete") {
-        await setActive!({ session: result.createdSessionId });
+      if (result.status === "complete" && result.createdSessionId && result.createdUserId) {
+        await setActive({ session: result.createdSessionId });
 
         // Register in our DB
         await fetch("/api/users/register", {

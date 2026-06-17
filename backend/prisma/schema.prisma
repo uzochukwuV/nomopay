@@ -27,6 +27,11 @@ enum TransactionStatus {
   disputed
 }
 
+enum FulfillmentStatus {
+  unfulfilled
+  shipped
+}
+
 model User {
   id                       String    @id @default(cuid())
   clerkId                  String    @unique
@@ -103,7 +108,11 @@ model Transaction {
   affiliateCommission    Int               // in cents
   currency               String            @default("usd")
   status                 TransactionStatus @default(pending)
+  fulfillmentStatus      FulfillmentStatus @default(unfulfilled)
   buyerEmail             String?
+  trackingUrl            String?
+  shippedAt              DateTime?
+  merchantNote           String?
   merchantTransferId     String?
   affiliateTransferId    String?
   transferGroup          String?
