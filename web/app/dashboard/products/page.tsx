@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSafeAuth } from "@/app/lib/use-safe-clerk";
+import { readApiResponse } from "@/app/lib/http";
 import Link from "next/link";
 
 type Product = {
@@ -22,14 +23,21 @@ export default function ProductsPage() {
   const { getToken } = useSafeAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     const token = await getToken();
     if (!token) return;
-    const res = await fetch("/api/products?limit=100", { headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    setProducts(data.products ?? []);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/products?limit=100", { headers: { Authorization: `Bearer ${token}` } });
+      const data = await readApiResponse<{ products?: Product[] }>(res);
+      setProducts(data.products ?? []);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load products.");
+    } finally {
+      setLoading(false);
+    }
   }, [getToken]);
 
   useEffect(() => {
@@ -37,10 +45,17 @@ export default function ProductsPage() {
     async function loadInitial() {
       const token = await getToken();
       if (!token || cancelled) return;
-      const res = await fetch("/api/products?limit=100", { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
+      try {
+        const res = await fetch("/api/products?limit=100", { headers: { Authorization: `Bearer ${token}` } });
+        const data = await readApiResponse<{ products?: Product[] }>(res);
+        if (cancelled) return;
+        setProducts(data.products ?? []);
+        setError("");
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Unable to load products.");
+      }
       if (cancelled) return;
-      setProducts(data.products ?? []);
       setLoading(false);
     }
     void loadInitial();
@@ -74,6 +89,10 @@ export default function ProductsPage() {
 
       {loading ? (
         <p className="text-sm" style={{ color: "var(--ash)" }}>Loading products...</p>
+      ) : error ? (
+        <div className="rounded-2xl p-6 text-sm font-bold" style={{ background: "#fff0f0", color: "#8a2020" }}>
+          {error}
+        </div>
       ) : products.length === 0 ? (
         <div className="rounded-2xl p-16 text-center border-dashed border-2" style={{ borderColor: "var(--border-subtle)" }}>
           <h3 className="font-semibold mb-1" style={{ color: "var(--midnight)" }}>No products yet</h3>

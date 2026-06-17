@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSafeAuth } from "@/app/lib/use-safe-clerk";
+import { readApiResponse } from "@/app/lib/http";
 
 interface Transaction {
   id: string;
@@ -52,18 +53,24 @@ export default function TransactionsPage() {
   const { getToken } = useSafeAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [tracking, setTracking] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function load() {
       const token = await getToken();
       if (!token) return;
-      const res = await fetch("/api/analytics/transactions?limit=50", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setTransactions(data.transactions ?? []);
-      setLoading(false);
+      try {
+        const res = await fetch("/api/analytics/transactions?limit=50", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await readApiResponse<{ transactions?: Transaction[] }>(res);
+        setTransactions(data.transactions ?? []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to load transactions.");
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, [getToken]);
@@ -78,7 +85,7 @@ export default function TransactionsPage() {
       body: JSON.stringify({ trackingUrl }),
     });
     if (res.ok) {
-      const data = await res.json();
+      const data = await readApiResponse<{ transaction: Transaction }>(res);
       setTransactions((items) => items.map((item) => (item.id === tx.id ? data.transaction : item)));
     }
   }
@@ -107,6 +114,10 @@ export default function TransactionsPage() {
 
       {loading ? (
         <div className="flex justify-center py-20" style={{ color: "var(--ash)" }}><Spinner /></div>
+      ) : error ? (
+        <div className="rounded-2xl p-6 text-sm font-bold" style={{ background: "#fff0f0", color: "#8a2020" }}>
+          {error}
+        </div>
       ) : transactions.length === 0 ? (
         <div className="rounded-2xl p-16 text-center border-dashed border-2" style={{ borderColor: "var(--border-subtle)" }}>
           <p className="font-bold mb-1" style={{ color: "var(--midnight)" }}>No transactions yet</p>
