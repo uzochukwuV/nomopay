@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { NextFunction, Request, Response } from 'express';
 import { stripe, PLATFORM_FEE_RATE } from '../lib/stripe.js';
 import { prisma } from '../lib/prisma.js';
+import { syncStripeConnectStatus } from '../lib/connectStatus.js';
 
 const router = Router();
 
@@ -27,7 +28,7 @@ router.post('/create-session', async (req: Request, res: Response, next: NextFun
     where: { id: productId },
     include: {
       merchant: {
-        select: { stripeAccountId: true, stripeOnboardingComplete: true },
+        select: { id: true, stripeAccountId: true, stripeOnboardingComplete: true },
       },
     },
   });
@@ -37,7 +38,16 @@ router.post('/create-session', async (req: Request, res: Response, next: NextFun
     return;
   }
 
-  if (!product.merchant.stripeOnboardingComplete || !product.merchant.stripeAccountId) {
+  const connectStatus = product.merchant.stripeAccountId
+    ? await syncStripeConnectStatus(product.merchant)
+    : {
+        onboardingComplete: false,
+        chargesEnabled: false,
+        payoutsEnabled: false,
+        stripeAccountId: null,
+      };
+
+  if (!connectStatus.onboardingComplete || !connectStatus.stripeAccountId) {
     res.status(400).json({ error: 'Merchant payment account not ready' });
     return;
   }

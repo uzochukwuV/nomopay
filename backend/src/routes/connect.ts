@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { stripe } from '../lib/stripe.js';
 import { prisma } from '../lib/prisma.js';
+import { syncStripeConnectStatus } from '../lib/connectStatus.js';
 import { requireAuth } from '../middleware/auth.js';
 import type { AuthenticatedRequest } from '../middleware/auth.js';
 
@@ -13,7 +14,13 @@ router.post('/onboard', requireAuth, async (req: Request, res: Response): Promis
     const user = (req as AuthenticatedRequest).user!;
     const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
     const isAffiliate = user.role === 'affiliate';
-    const returnPath = isAffiliate ? '/dashboard/discover?onboarding=true' : '/dashboard/ai-import?onboarding=true';
+    const requestedReturnPath = typeof req.body?.returnPath === 'string' ? req.body.returnPath : null;
+    const returnPath =
+      requestedReturnPath?.startsWith('/dashboard')
+        ? requestedReturnPath
+        : isAffiliate
+        ? '/dashboard/discover?onboarding=true'
+        : '/dashboard/ai-import?onboarding=true';
 
     let stripeAccountId = user.stripeAccountId;
 
@@ -71,23 +78,7 @@ router.get('/status', requireAuth, async (req: Request, res: Response): Promise<
     return;
   }
 
-  const account = await stripe.accounts.retrieve(user.stripeAccountId);
-  const onboardingComplete = !!(account.charges_enabled && account.payouts_enabled);
-
-  // Sync status back to DB if it changed
-  if (onboardingComplete !== user.stripeOnboardingComplete) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { stripeOnboardingComplete: onboardingComplete },
-    });
-  }
-
-  res.json({
-    onboardingComplete,
-    chargesEnabled: account.charges_enabled,
-    payoutsEnabled: account.payouts_enabled,
-    stripeAccountId: user.stripeAccountId,
-  });
+  res.json(await syncStripeConnectStatus(user));
 });
 
 export default router;

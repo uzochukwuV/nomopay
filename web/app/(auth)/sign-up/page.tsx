@@ -1,11 +1,16 @@
 import SignUpForm from "./sign-up-form";
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
 export default async function SignUpPage({
   searchParams,
 }: {
   searchParams: Promise<{ role?: string; inviterSlug?: string; inviterName?: string }>;
 }) {
+  const { userId } = await auth();
+  if (userId) redirect("/dashboard");
+
   const { role, inviterSlug, inviterName } = await searchParams;
 
   // Invite links lock the role to affiliate
