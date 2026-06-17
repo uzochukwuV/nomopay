@@ -7,6 +7,19 @@ import { useSafeClerk, useSafeSignUp } from "@/app/lib/use-safe-clerk";
 
 type Role = "merchant" | "affiliate" | "both";
 
+type ClerkSignUpResult = {
+  status: string | null;
+  createdSessionId?: string | null;
+  createdUserId?: string | null;
+};
+
+type ClerkActionResult = {
+  error?: {
+    message?: string;
+    longMessage?: string;
+  } | null;
+};
+
 function ArrowIcon() {
   return (
     <svg
@@ -59,6 +72,8 @@ export default function SignUpForm({
   const [password, setPassword] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [pendingVerification, setPendingVerification] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -89,6 +104,10 @@ export default function SignUpForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (pendingVerification) {
+      await handleVerifyEmail();
+      return;
+    }
     if (!name || !email || !password || !slug) {
       setError("Please fill in all fields.");
       return;
@@ -105,38 +124,32 @@ export default function SignUpForm({
     setIsLoading(true);
 
     try {
-      // Create Clerk account
-      const result = (await signUp.create({
+      const result = (await signUp.password({
         emailAddress: email,
         password,
         firstName: name,
-      })) as unknown as { status: string; createdSessionId?: string; createdUserId?: string };
+      })) as ClerkActionResult;
 
-      // Activate the session immediately (test keys skip email verification)
-      if (result.status === "complete" && result.createdSessionId && result.createdUserId) {
-        await setActive({ session: result.createdSessionId });
+      if (result.error) {
+        setError(getClerkActionError(result));
+        return;
+      }
 
-        // Register in our DB
-        await fetch("/api/users/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            clerkId: result.createdUserId,
-            email,
-            name,
-            role,
-            slug,
-          }),
-        });
-
-        router.push(`/onboarding?role=${role}`);
-      } else if (result.status === "missing_requirements") {
-        // Email verification required
-        setError(
-          "Please verify your email address. Check your inbox for a verification link."
-        );
+      if (signUp.status === "complete" && signUp.createdSessionId && signUp.createdUserId) {
+        await completeRegistration(signUp.createdSessionId, signUp.createdUserId);
+      } else if (
+        signUp.status === "missing_requirements" ||
+        signUp.unverifiedFields.includes("email_address")
+      ) {
+        const verification = (await signUp.verifications.sendEmailCode()) as ClerkActionResult;
+        if (verification.error) {
+          setError(getClerkActionError(verification));
+          return;
+        }
+        setPendingVerification(true);
+        setError("");
       } else {
-        setError("Sign-up incomplete. Please try again.");
+        setError(`Sign-up needs another step (${signUp.status ?? "unknown"}). Please try again.`);
       }
     } catch (err: unknown) {
       const clerkError = err as { errors?: { message: string }[] };
@@ -148,6 +161,72 @@ export default function SignUpForm({
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleVerifyEmail() {
+    if (!verificationCode.trim()) {
+      setError("Enter the verification code from your email.");
+      return;
+    }
+    if (!signUp) {
+      setError("Auth service unavailable. Please try again.");
+      return;
+    }
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const result = (await signUp.verifications.verifyEmailCode({
+        code: verificationCode.trim(),
+      })) as ClerkActionResult;
+
+      if (result.error) {
+        setError(getClerkActionError(result));
+        return;
+      }
+
+      if (signUp.status === "complete" && signUp.createdSessionId && signUp.createdUserId) {
+        await completeRegistration(signUp.createdSessionId, signUp.createdUserId);
+      } else {
+        setError(`Verification needs another step (${signUp.status ?? "unknown"}). Please try again.`);
+      }
+    } catch (err: unknown) {
+      const clerkError = err as { errors?: { message: string }[] };
+      if (clerkError?.errors?.[0]?.message) {
+        setError(clerkError.errors[0].message);
+      } else {
+        setError("Invalid verification code. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function completeRegistration(sessionId: string, clerkId: string) {
+    await setActive({ session: sessionId });
+
+    const res = await fetch("/api/users/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clerkId,
+        email,
+        name,
+        role,
+        slug,
+      }),
+    });
+
+    if (!res.ok && res.status !== 409) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error ?? "Could not finish account setup.");
+    }
+
+    router.push(`/onboarding?role=${role}`);
+  }
+
+  function getClerkActionError(result: ClerkActionResult) {
+    return result.error?.longMessage ?? result.error?.message ?? "Clerk could not complete this step.";
   }
 
   const inputStyle: React.CSSProperties = {
@@ -219,6 +298,22 @@ export default function SignUpForm({
             </button>
           ))}
         </div>
+      )}
+
+      {pendingVerification && (
+        <label className="grid gap-2">
+          <span className="text-graphite text-[13px] font-bold">Email code</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={verificationCode}
+            onChange={(e) => setVerificationCode(e.target.value)}
+            placeholder="Enter the code Clerk emailed you"
+            className="w-full px-4 py-3.5 rounded-2xl text-[14px] font-semibold text-midnight outline-none"
+            style={inputStyle}
+            required
+          />
+        </label>
       )}
 
       {/* Name */}
@@ -345,11 +440,11 @@ export default function SignUpForm({
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
               />
             </svg>
-            Creating account…
+            {pendingVerification ? "Verifying code..." : "Creating account..."}
           </>
         ) : (
           <>
-            Create account
+            {pendingVerification ? "Verify email" : "Create account"}
             <ArrowIcon />
           </>
         )}
