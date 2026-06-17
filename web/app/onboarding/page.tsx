@@ -61,7 +61,13 @@ function OnboardingContent() {
         },
         body: JSON.stringify({ role }),
       });
-      const data = await res.json();
+      const contentType = res.headers.get("content-type") ?? "";
+      const data = contentType.includes("application/json")
+        ? await res.json()
+        : { error: await res.text() };
+      if (!res.ok) {
+        throw new Error(data?.error ?? `Stripe onboarding failed (${res.status}).`);
+      }
       if (data?.url) {
         window.location.href = data.url;
       } else {
