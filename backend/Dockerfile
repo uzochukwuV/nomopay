@@ -15,7 +15,6 @@ RUN npx prisma generate
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
-RUN npm prune --omit=dev
 
 FROM node:22-alpine AS runner
 
@@ -32,4 +31,4 @@ COPY --from=build /app/prisma ./prisma
 
 EXPOSE 8080
 
-CMD ["node", "dist/index.js"]
+CMD ["npm", "start"]
