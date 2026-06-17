@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState, useEffect } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSafeAuth } from "@/app/lib/use-safe-clerk";
 import Link from "next/link";
 
 function formatCents(cents: number) {
@@ -31,7 +31,7 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub: st
 }
 
 function MerchantOverview() {
-  const { getToken } = useAuth();
+  const { getToken } = useSafeAuth();
   const [stats, setStats] = useState<{
     totalRevenue: number;
     totalMerchantPayout: number;
@@ -234,7 +234,7 @@ function MerchantOverview() {
 }
 
 function AffiliateOverview() {
-  const { getToken } = useAuth();
+  const { getToken } = useSafeAuth();
   const [stats, setStats] = useState<{
     totalEarned: number;
     totalClicks: number;
@@ -375,7 +375,7 @@ function AffiliateOverview() {
 }
 
 export default function DashboardPage() {
-  const { getToken } = useAuth();
+  const { getToken } = useSafeAuth();
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {

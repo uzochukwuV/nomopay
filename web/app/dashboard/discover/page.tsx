@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSafeAuth } from "@/app/lib/use-safe-clerk";
 
 interface Product {
   id: string;
@@ -279,7 +279,7 @@ function ProductCard({
 }
 
 export default function DiscoverPage() {
-  const { getToken } = useAuth();
+  const { getToken } = useSafeAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState("");

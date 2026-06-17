@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSafeAuth } from "@/app/lib/use-safe-clerk";
 
 interface Transaction {
   id: string;
@@ -49,7 +49,7 @@ function Spinner() {
 }
 
 export default function TransactionsPage() {
-  const { getToken } = useAuth();
+  const { getToken } = useSafeAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [tracking, setTracking] = useState<Record<string, string>>({});

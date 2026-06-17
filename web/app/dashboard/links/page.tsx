@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSafeAuth } from "@/app/lib/use-safe-clerk";
 
 interface AffiliateLink {
   id: string;
@@ -236,7 +236,7 @@ function LinkCard({ link, token }: { link: AffiliateLink; token: string }) {
 }
 
 export default function LinksPage() {
-  const { getToken } = useAuth();
+  const { getToken } = useSafeAuth();
   const [links, setLinks] = useState<AffiliateLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState("");

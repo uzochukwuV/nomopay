@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useClerk, useSignUp } from "@clerk/nextjs";
+import { useSafeClerk, useSafeSignUp } from "@/app/lib/use-safe-clerk";
 
 type Role = "merchant" | "affiliate" | "both";
 
@@ -51,8 +51,8 @@ export default function SignUpForm({
   inviterName?: string;
 }) {
   const router = useRouter();
-  const { signUp } = useSignUp();
-  const { setActive } = useClerk();
+  const { signUp } = useSafeSignUp();
+  const { setActive } = useSafeClerk();
   const [role, setRole] = useState<Role>(initialRole);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSafeAuth } from "@/app/lib/use-safe-clerk";
 import Link from "next/link";
 
 export default function NotificationsPage() {
-  const { getToken } = useAuth();
+  const { getToken } = useSafeAuth();
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
