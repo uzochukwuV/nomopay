@@ -1,7 +1,12 @@
 import SignInForm from "./sign-in-form";
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
-export default function SignInPage() {
+export default async function SignInPage() {
+  const { userId } = await auth();
+  if (userId) redirect("/dashboard");
+
   return (
     <main
       className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden"
