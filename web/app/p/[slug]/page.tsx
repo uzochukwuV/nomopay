@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { backendApiUrl } from "@/app/lib/api";
 import BuyButton from "./buy-button";
 
 interface Product {
@@ -18,7 +19,7 @@ interface Product {
 async function getProduct(slug: string): Promise<Product | null> {
   try {
     const res = await fetch(
-      `http://localhost:8080/api/products/by-slug/${encodeURIComponent(slug)}`,
+      backendApiUrl(`/api/products/by-slug/${encodeURIComponent(slug)}`),
       { cache: "no-store" }
     );
     if (!res.ok) return null;

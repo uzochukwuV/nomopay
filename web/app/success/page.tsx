@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { backendApiUrl } from "@/app/lib/api";
 
 function formatCents(cents: number | null | undefined, currency: string | null | undefined) {
   return new Intl.NumberFormat("en-US", {
@@ -9,7 +10,7 @@ function formatCents(cents: number | null | undefined, currency: string | null |
 
 async function getSession(sessionId: string) {
   try {
-    const res = await fetch(`http://localhost:8080/api/checkout/session/${encodeURIComponent(sessionId)}`, {
+    const res = await fetch(backendApiUrl(`/api/checkout/session/${encodeURIComponent(sessionId)}`), {
       cache: "no-store",
     });
     if (!res.ok) return null;
