@@ -1,12 +1,21 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-export const proxy = clerkMiddleware(async (auth) => {
-  await auth.protect();
+const isProtectedRoute = createRouteMatcher([
+  "/dashboard(.*)",
+  "/onboarding(.*)",
+]);
+
+export const proxy = clerkMiddleware(async (auth, request) => {
+  if (isProtectedRoute(request)) {
+    await auth.protect();
+  }
 });
 
 export const config = {
   matcher: [
     "/dashboard/:path*",
     "/onboarding/:path*",
+    "/sign-in",
+    "/sign-up",
   ],
 };
